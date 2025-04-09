@@ -39,6 +39,8 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
     cdl_coll_id = 'USDA/NASS/CDL'
     ca_coll_id = 'projects/openet/assets/crop_type/california'
 
+    nlcd_coll_id = 'projects/sat-io/open-datasets/USGS/ANNUAL_NLCD/LANDCOVER'
+
     project_id = 'projects/openet/assets'
 
     field_folder_id = f'{project_id}/features/fields/temp'
@@ -59,9 +61,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
             'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY',
         ]
     else:
-        states = sorted(list(set(
-            y.strip() for x in states for y in x.split(',') if y.strip()
-        )))
+        states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
     # This CDL start year is for the full CONUS images, but CDL does exist for
@@ -130,35 +130,6 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
     cdl_remap_in, cdl_remap_out = map(list, zip(*cdl_annual_remap.items()))
 
 
-    # Setting the in between years explicitly
-    # Selecting the previous NLCD year when difference is equal
-    # Will use first/last available year for years outside provided range
-    # TODO: Double check this decision
-    nlcd_img_ids = {
-        2021: 'USGS/NLCD_RELEASES/2021_REL/NLCD/2021',
-        2020: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2019',
-        2019: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2019',
-        2018: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2019',
-        2017: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2016',
-        2016: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2016',
-        2015: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2016',
-        2014: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2013',
-        2013: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2013',
-        2012: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2011',
-        2011: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2011',
-        2010: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2011',
-        2009: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2008',
-        2008: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2008',
-        2007: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2006',
-        2006: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2006',
-        2005: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2004',
-        2004: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2004',
-        2003: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2004',
-        2002: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2001',
-        2001: 'USGS/NLCD_RELEASES/2019_REL/NLCD/2001',
-    }
-
-
     logging.info('\nInitializing Earth Engine')
     if gee_key_file:
         logging.info(f'  Using service account key file: {gee_key_file}')
@@ -167,13 +138,11 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
     else:
         ee.Initialize()
 
-
     # Get current running tasks
     tasks = utils.get_ee_tasks()
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         logging.debug(f'  Tasks: {len(tasks)}')
         input('ENTER')
-
 
     logging.info('\nGetting bucket file list')
     bucket = STORAGE_CLIENT.get_bucket(bucket_name)
@@ -285,10 +254,18 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
 
             # Select the NLCD year
             # Use the first/last available year if outside the available range
-            nlcd_year = min(year, max(nlcd_img_ids.keys()))
-            nlcd_year = max(nlcd_year, min(nlcd_img_ids.keys()))
-            nlcd_img_id = nlcd_img_ids[nlcd_year]
-            nlcd_img = ee.Image(nlcd_img_id).select('landcover')
+            nlcd_coll = ee.ImageCollection(nlcd_coll_id)
+            nlcd_year = (
+                ee.Number(year)
+                .max(ee.Date(nlcd_coll.aggregate_min('system:time_start')).get('year'))
+                .min(ee.Date(nlcd_coll.aggregate_max('system:time_start')).get('year'))
+            )
+            nlcd_date = ee.Date.fromYMD(nlcd_year, 1, 1)
+            nlcd_img = (
+                ee.ImageCollection(nlcd_coll_id)
+                .filterDate(nlcd_date, nlcd_date.advance(1, 'year')).first()
+                .select(['landcover'])
+            )
 
             # Change any CDL 176 and NLCD 81/82 pixels to 37
             cdl_img = cdl_img.where(

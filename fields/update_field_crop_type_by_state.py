@@ -41,8 +41,10 @@ def main(states, years=[], overwrite_flag=False):
     # clear_existing_values = True
 
     # CSV stats bucket path
-    bucket_name = 'openet'
-    bucket_folder = 'crop_type'
+    bucket_name = 'openet_geodatabase'
+    bucket_folder = 'temp_croptype_20250409'
+
+    shell_flag = True
 
     field_ws = os.getcwd()
     shapefile_ws = os.path.join(field_ws, 'shapefiles')
@@ -67,11 +69,14 @@ def main(states, years=[], overwrite_flag=False):
     # This CDL start year is for the full CONUS images, but CDL does exist for
     #   some states back to 1997 (see cdl_year_states dictionary below)
     cdl_year_min = 2008
-    cdl_year_max = 2023
+    cdl_year_max = 2024
 
     # Min/max year range to process
     year_min = 1997
-    year_max = 2023
+    year_max = 2024
+    # year_min = 2008
+    # year_max = datetime.today().year
+
     if not years:
         years = list(range(year_min, year_max+1))
     else:
@@ -176,10 +181,19 @@ def main(states, years=[], overwrite_flag=False):
             # if overwrite_flag:
             if not os.path.isfile(stats_path) or overwrite_flag:
                 logging.debug(f'  Downloading stats {output_format} from bucket')
+
+                # print(bucket_name)
+                # print(bucket_folder)
+                # print("\n")
+                # print(stats_name)
+                # print(stats_ws)
+                # subprocess.call('gsutil')
                 subprocess.call(
+                    # ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{stats_name}', stats_ws],
                     ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{bucket_folder}/{stats_name}', stats_ws],
                     # cwd=field_ws,
-                    # shell=shell_flag,
+                    shell=shell_flag,
+                    # check=True,
                 )
 
             if not os.path.isfile(stats_path):
@@ -258,7 +272,7 @@ def main(states, years=[], overwrite_flag=False):
 
         # First update the shapefile with the LandIQ values
         for year in years:
-            if year < 2008:
+            if year < 2009:
                 continue
             logging.info(f'{year}')
 
@@ -273,7 +287,7 @@ def main(states, years=[], overwrite_flag=False):
                 subprocess.call(
                     ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{bucket_folder}/{stats_name}', stats_ws],
                     # cwd=field_ws,
-                    # shell=shell_flag,
+                    shell=shell_flag,
                 )
             if not os.path.isfile(stats_path):
                 logging.info('  Stats file does not exist - skipping')
@@ -323,7 +337,7 @@ def main(states, years=[], overwrite_flag=False):
 
         # Then update any missing values with the LandIQ/CDL composite values
         for year in years:
-            if year < 2007:
+            if year < 2008:
                 continue
             logging.info(f'{year}')
 
@@ -336,9 +350,10 @@ def main(states, years=[], overwrite_flag=False):
             if not os.path.isfile(stats_path):
                 logging.info('  Downloading stats files from bucket')
                 subprocess.call(
+                    # ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{stats_name}', stats_ws],
                     ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{bucket_folder}/{stats_name}', stats_ws],
                     # cwd=field_ws,
-                    # shell=shell_flag,
+                    shell=shell_flag,
                 )
             if not os.path.isfile(stats_path):
                 logging.info('  Stats file does not exist - skipping')

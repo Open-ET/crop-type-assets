@@ -46,8 +46,8 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
     field_folder_id = f'{project_id}/features/fields/temp'
     # field_folder_id = f'{project_id}/features/fields/2024-02-01'
 
-    bucket_name = 'openet'
-    bucket_folder = 'crop_type'
+    bucket_name = 'openet_geodatabase'
+    bucket_folder = 'temp_croptype_20250409'
 
     output_format = 'CSV'
     # output_format = 'GeoJSON'
@@ -66,12 +66,12 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
 
     # This CDL start year is for the full CONUS images, but CDL does exist for
     #   some states back to 1997 (see cdl_year_states dictionary below)
-    cdl_year_min = 2008
-    cdl_year_max = 2023
+    cdl_year_min = 1997
+    cdl_year_max = 2024
 
     # Min/max year range to process
-    year_min = 1997
-    year_max = 2023
+    year_min = 2008
+    year_max = 2024
     # year_max = datetime.datetime.today().year
 
     if not years:
@@ -142,7 +142,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
     tasks = utils.get_ee_tasks()
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         logging.debug(f'  Tasks: {len(tasks)}')
-        input('ENTER')
+        # input('ENTER')
 
     logging.info('\nGetting bucket file list')
     bucket = STORAGE_CLIENT.get_bucket(bucket_name)
@@ -354,12 +354,12 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
             #   Starting before 2009 makes switching to CDL 2008 a little tricky
 
             # Select the California image
-            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022]:
+            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
                 # Use the California image directly for years when it is present
                 ca_img_id = f'{ca_coll_id}/{year}'
                 ca_img = ee.Image(ca_img_id)
-            elif year > 2022:
-                ca_img_id = f'{ca_coll_id}/2022'
+            elif year > 2023:
+                ca_img_id = f'{ca_coll_id}/2023'
                 ca_img = ee.Image(ca_img_id).remap(cdl_remap_in, cdl_remap_out)
             elif year in [2015, 2017]:
                 ca_img_id = f'{ca_coll_id}/{year-1}'
@@ -379,7 +379,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
             else:
                 raise Exception(f'unexpected California (LandIQ) year: {year}')
 
-            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022]:
+            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
                 crop_src = f'{ca_img_id}'
             else:
                 crop_src = f'{ca_img_id} - remapped annual crops'
@@ -463,12 +463,12 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
             # if year < 2009:
             #     logging.debug('Not using LandIQ before 2009 - skipping')
             #     continue
-            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022]:
+            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
                 # Use the LandIQ directly for years when it is present
                 ca_img_id = f'{ca_coll_id}/{year}'
                 ca_img = ee.Image(ca_img_id)
-            elif year > 2022:
-                ca_img_id = f'{ca_coll_id}/2022'
+            elif year > 2023:
+                ca_img_id = f'{ca_coll_id}/2023'
                 ca_img = ee.Image(ca_img_id).remap(cdl_remap_in, cdl_remap_out)
             elif year in [2015, 2017]:
                 ca_img_id = f'{ca_coll_id}/{year-1}'

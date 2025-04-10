@@ -1,0 +1,119 @@
+IN,OUT,Note
+C,72,CA:Citrus and subtropical (CDL Citrus) | CDL:Citrus
+C1,72,CA:Grapefruit | CDL:Citrus
+C10,71,CA:Eucalyptus | CDL:Other Tree Crops
+C11,71,CA:Mixed subtropical fruits | CDL:Other Tree Crops
+C2,72,CA:Lemons | CDL:Citrus
+C3,72,CA:Oranges | CDL:Citrus
+C4,71,CA:Dates | CDL:Other Tree Crops
+C5,215,CA:Avocados | CDL:Avocados
+C6,211,CA:Olives | CDL:Olives
+C7,71,CA:Subtropical Fruits Misc. | CDL:Other Tree Crops
+C8,71,CA:Kiwis | CDL:Other Tree Crops
+C9,71,CA:Jojoba | CDL:Other Tree Crops
+D,71,CA:Deciduous fruits and nuts | CDL:Other Tree Crops
+D1,68,CA:Apples | CDL:Apples
+D10,71,CA:Miscellaneous deciduous | CDL:Other Tree Crops
+D11,71,CA:Mixed deciduous | CDL:Other Tree Crops
+D12,75,CA:Almonds | CDL:Almonds
+D13,76,CA:Walnuts | CDL:Walnuts
+D14,204,CA:Pistachios | CDL:Pistachios
+D15,217,CA:Pomegranates | CDL:Pomegranates
+D16,220,CA:Plums Prunes or Apricots grouped for remote sensing only | CDL:Plums
+D17,74,CA:Pecans | CDL:Pecans
+D2,223,CA:Apricots | CDL:Apricots
+D3,66,CA:Cherries | CDL:Cherries
+D5,67,CA:Peaches and nectarines | CDL:Peaches
+D6,77,CA:Pears | CDL:Pears
+D6,77,CA:Pears | CDL:Pears
+D7,220,CA:Plums | CDL:Plums
+D8,210,CA:Prunes | CDL:Prunes
+D9,71,CA:Figs | CDL:Other Tree Crops
+F,47,CA:Field Crops - No Subclass | CDL:Misc Annual Crop
+F1,2,CA:Cotton | CDL:Cotton
+F10,42,CA:Beans (dry) | CDL:Dry Beans
+F11,47,CA:Field Misc. | CDL:Misc Annual Crop
+F12,6,CA:Sunflowers | CDL:Sunflower
+F13,4,CA:Hybrid sorghum/Sudan | CDL:Sorghum
+F14,29,CA:Millet | CDL:Millet
+F15,45,CA:Sugar cane | CDL:Sugarcane
+F16,1,"CA:Corn, Sorghum or Sudan (grouped for remote sensing classification only) | CDL:Corn"
+F2,33,CA:Safflower | CDL:Safflower
+F3,32,CA:Flax | CDL:Flaxseed
+F4,56,CA:Hops | CDL:Hops
+F5,41,CA:Sugar beets | CDL:Sugarbeets
+F5,41,CA:Sugar beets | CDL:Sugarbeets
+F6,1,CA:Corn (field & sweet) | CDL:Corn
+F7,4,CA:Grain sorghum | CDL:Sorghum
+F8,47,CA:Sudan | CDL:Misc Annual Crop
+F9,47,CA:Castor beans | CDL:Misc Annual Crop
+G,25,CA:Grain and Hay - No Subclass | CDL:Small Grains
+G1,21,CA:Barley | CDL:Barley
+G2,24,CA:Wheat | CDL:Winter Wheat
+G3,28,CA:Oats | CDL:Oats
+G6,25,CA:Grain and Hay - Misc. | CDL:Small Grains
+G7,37,CA:Mixed grain and hay | CDL:Grass Hay
+I1,61,"CA:Idle - Land not cropped in current or prior year, but within last 3 yrs. | CDL:Fallow / Idle Cropland"
+I2,61,CA:Idle - New lands being prepared for crop production | CDL:Fallow / Idle Cropland
+I4,61,CA:Idle long term land consistently idle for four or more years | CDL:Fallow / Idle Cropland
+NR,195,CA:Riparian Vegetation | CDL:Herbaceous Wetlands
+NR1,195,"CA:Marsh lands, tules and sedges | CDL:Herbaceous Wetlands"
+NR2,37,CA:Natural high water table meadow | CDL:Grass Hay
+NR3,190,"CA:Trees, shrubs or other larger stream side or watercourse vegetation | CDL:Woody Wetlands"
+NR4,195,"CA:Seasonal duck marsh, dry or only partially wet during summer | CDL:Herbaceous Wetlands"
+NR5,195,"CA:Permanent duck marsh, flooded during summer | CDL:Herbaceous Wetlands"
+P,37,CA:Pasture (CDL Other Hay/Non Alfalfa) | CDL:Grass Hay
+P1,36,CA:Alfalfa and alfalfa mixtures | CDL:Alfalfa
+P10,37,CA:Klein grass | CDL:Grass Hay
+P2,58,CA:Clover | CDL:Clover / Wildflowers
+P3,37,CA:Mixed pasture | CDL:Grass Hay
+P4,37,CA:Native pasture | CDL:Grass Hay
+P5,37,CA:Induced high water table native pasture (CDL Other Hay/Non Alfalfa) | CDL:Grass Hay
+P6,37,CA:Miscellaneous grasses (CDL Other Hay/Non Alfalfa) | CDL:Grass Hay
+P7,59,CA:Turf Farms | CDL:Sod/Grass Seed
+P8,59,CA:Bermuda grass | CDL:Sod/Grass Seed
+P9,27,CA:Rye grass | CDL:Rye
+R,3,CA:Rice | CDL:Rice
+R1,3,CA:Rice | CDL:Rice
+R2,3,CA:Wild Rice | CDL:Rice
+T,47,CA:Truck Crops - No Subclass | CDL:Misc Annual Crop
+T1,47,CA:Artichokes | CDL:Misc Annual Crop
+T10,49,CA:Onions and Garlic | CDL:Onions
+T11,53,CA:Peas | CDL:Peas
+T12,43,CA:Potatoes | CDL:Potatoes
+T13,46,CA:Sweet Potatoes | CDL:Sweet Potatoes
+T14,47,CA:Spinach | CDL:Misc Annual Crop
+T15,54,CA:Tomatoes (Processing) | CDL:Tomatoes
+T16,47,"CA:Flowers, nursery and Christmas Tree Farms | CDL:Misc Annual Crop"
+T17,47,CA:Truck Crops - Mixture of four or more | CDL:Misc Annual Crop
+T18,47,CA:Truck Crops - Misc. | CDL:Misc Annual Crop
+T19,242,CA:Blueberries | CDL:Blueberries
+T2,207,CA:Asparagus | CDL:Asparagus
+T20,221,CA:Strawberries | CDL:Strawberries
+T21,216,CA:Peppers | CDL:Peppers
+T22,214,CA:Broccoli | CDL:Broccoli
+T23,243,CA:Cabbage | CDL:Cabbage
+T24,244,CA:Cauliflower | CDL:Cauliflower
+T25,47,CA:Brussels sprouts | CDL:Misc Annual Crop
+T26,54,CA:Tomatoes (market) | CDL:Tomatoes
+T27,122,CA:Greenhouse | CDL:Developed/Low Intensity
+T28,242,CA:Blueberries | CDL:Blueberries
+T29,47,CA:Asian leafy vegetables | CDL:Misc Annual Crop
+T3,47,CA:Beans (green) | CDL:Misc Annual Crop
+T30,227,CA:Lettuce | CDL:Lettuce
+T31,46,CA:Potato or Sweet potato (grouped for remote sensing classification only) | CDL:Sweet Potatoes
+T32,54,CA:Tomatoes (all) | CDL:Tomatoes
+T4,214,CA:Cole crops | CDL:Broccoli
+T4,214,CA:Broccoli | CDL:Broccoli
+T6,206,CA:Carrots | CDL:Carrots
+T7,245,CA:Celery | CDL:Celery
+T8,227,CA:Lettuce (all types) | CDL:Lettuce
+T9,48,"CA:Melons, Squash, and Cucumbers | CDL:Watermelons"
+U,82,CA:Developed | CDL:Developed
+UL2,59,CA:Urban Landscape - Golf Course Irrigated | CDL:Sod/Grass Seed
+V,69,CA:Vineyards - No Subclass | CDL:Grapes
+V1,78,CA:Table grapes | OpenET:Table Grapes
+V2,69,CA:Wine grapes | CDL:Grapes
+V3,69,CA:Raisin grapes | CDL:Grapes
+X,61,CA:Not cropped or unclassified  | CDL:Fallow / Idle Cropland
+YP,47,"CA:Young perennial fruits and nuts (maybe ""catch-all"" for polygons without a subclass) | CDL:Misc Annual Crop"

@@ -35,3 +35,11 @@ fields/shapefiles
 fields/source_zips
 fields/updated_zips
 *.zip
+*.csv
+*.dbf
+*.shp
+*.prj
+*.shx
+*.xml
+*.cpg
+*.qmd

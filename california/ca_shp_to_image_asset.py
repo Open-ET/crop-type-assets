@@ -19,11 +19,11 @@ logging.getLogger('urllib3').setLevel(logging.INFO)
 PROJECT_NAME = 'openet'
 STORAGE_CLIENT = storage.Client(project=PROJECT_NAME)
 BUCKET_NAME = 'openet_temp'
-BUCKET_FOLDER = 'landiq'
-YEARS = [2014, 2016, 2018, 2019, 2020, 2021, 2022]
+BUCKET_FOLDER = 'cadwr'
+YEARS = []
 
 
-def main(years, overwrite_flag=False):
+def main(YEARS, overwrite_flag=False):
     """
 
     Parameters
@@ -41,6 +41,9 @@ def main(years, overwrite_flag=False):
     tif_ws = os.path.join(workspace, 'images')
     map_ws = os.path.join(workspace, 'remaps')
 
+    if not YEARS:
+        YEARS = [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]
+
     # Hardcoding the shapefile folders and names for now since they are all slightly different
     src_paths = {
         2014: os.path.join(src_ws, 'i15_Crop_Mapping_2014_SHP', 'i15_Crop_Mapping_2014.shp'),
@@ -48,9 +51,9 @@ def main(years, overwrite_flag=False):
         2018: os.path.join(src_ws, 'i15_Crop_Mapping_2018_SHP', 'i15_Crop_Mapping_2018.shp'),
         2019: os.path.join(src_ws, 'i15_Crop_Mapping_2019', 'i15_Crop_Mapping_2019.shp'),
         2020: os.path.join(src_ws, 'i15_Crop_Mapping_2020', 'i15_Crop_Mapping_2020.shp'),
-        2021: os.path.join(src_ws, 'i15_Crop_Mapping_2021', 'i15_Crop_Mapping_2021.shp'),
-        2022: os.path.join(src_ws, 'i15_Crop_Mapping_2022_Provisional_SHP',
-                           'i15_Crop_Mapping_2022_Provisional.shp'),
+        2021: os.path.join(src_ws, 'i15_Crop_Mapping_2021_SHP', 'i15_Crop_Mapping_2021.shp'),
+        2022: os.path.join(src_ws, 'i15_Crop_Mapping_2022_SHP', 'i15_Crop_Mapping_2022.shp'),
+        2023: os.path.join(src_ws, 'i15_Crop_Mapping_2023_Provisional_SHP', 'i15_Crop_Mapping_2023_Provisional.shp'),
     }
 
 
@@ -68,7 +71,7 @@ def main(years, overwrite_flag=False):
     #     input('Press ENTER to continue')
     #     ee.data.createAsset({'type': 'FOLDER'}, collection_folder)
 
-    for year in years:
+    for year in YEARS:
         if year not in YEARS:
             raise ValueError(f'unsupported year {year}')
         logging.info(f'\n{year}')
@@ -76,8 +79,10 @@ def main(years, overwrite_flag=False):
         # Building projections from EPSG codes by year instead of reading from
         #   the shapefiles later on
         input_srs = osr.SpatialReference()
-        if year in [2019, 2020, 2021, 2022]:
+        if year in [2019, 2020, 2021, 2023]:
             input_srs.ImportFromEPSG(4269)
+        elif year in [2022]:
+            input_srs.ImportFromEPSG(3310)
         elif year in [2014, 2016, 2018]:
             input_srs.ImportFromEPSG(3857)
         else:
@@ -103,10 +108,18 @@ def main(years, overwrite_flag=False):
         if not os.path.isdir(tif_ws):
             os.makedirs(tif_ws)
 
-        # Load the California to CDL remap
-        remap_df = pd.read_csv(
-            os.path.join(map_ws, f'ca{year}_cdl_remap_table.csv'), comment='#'
-        )
+        # Load the California to CDL remap (MB-Changed to read a single remap table for 2016-2023)
+        if year == 2014:
+            remap_df = pd.read_csv(
+                os.path.join(map_ws, f'ca{year}_cdl_remap_table.csv'), comment='#'
+            )
+        else:
+            remap_df = pd.read_csv(
+                os.path.join(map_ws, f'ca2016_2023_cdl_remap_table.csv'), comment='#'
+            )
+        # remap_df = pd.read_csv(
+        #     os.path.join(map_ws, f'ca{year}_cdl_remap_table.csv'), comment='#'
+        # )
         ca_cdl_remap = dict(zip(remap_df.IN, remap_df.OUT))
 
 
@@ -138,10 +151,10 @@ def main(years, overwrite_flag=False):
             for src_ftr in src_layer:
                 src_fid = src_ftr.GetFID()
                 geometry = src_ftr.GetGeometryRef().Clone()
-                if year in [2019, 2020, 2021, 2022]:
+                if year in [2019, 2020, 2021, 2022, 2023]:
                     crop_type = src_ftr.GetField(f'CROPTYP2')
                     main_crop = src_ftr.GetField(f'MAIN_CROP')
-                elif year in [2018]:
+                elif year in [2016, 2018]:
                     crop_type = src_ftr.GetField(f'CROPTYP2')
                     main_crop = None
                 else:
@@ -431,4 +444,4 @@ if __name__ == '__main__':
     args = arg_parse()
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(years=args.years, overwrite_flag=args.overwrite)
+    main(YEARS=args.years, overwrite_flag=args.overwrite)

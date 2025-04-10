@@ -8,9 +8,9 @@ The preprococess tool will first ingest the bucket shapefiles into a temp folder
 
 The tool will also download and unzip the shapefiles and add the crop field fields to each shapefile if they are not present.  The default crop type value for each field will be set to 0 if the field is added.
 
-```
+
 python preprocess_shapefiles.py --states AZ
-```
+```[export_field_crop_type_by_state.py](export_field_crop_type_by_state.py)
 
 ## Zonal Stats
 
@@ -46,8 +46,9 @@ The crop type remappings are different for California since we are currently usi
 * 2015 - Use remapped annual 2014 LandIQ
 * 2016 - Use 2016 LandIQ directly
 * 2017 - Use remapped annual 2016 LandIQ
-* 2018-2022 - Use LandIQ directly
-* 2023 - Use remapped annual 2022 LandIQ
+* 2018-2023 - Use LandIQ directly
+* 2024 - Use remapped annual 2023 LandIQ
+
 
 #### Other States
 

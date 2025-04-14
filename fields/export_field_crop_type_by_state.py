@@ -9,8 +9,7 @@ import pandas as pd
 
 import openet.core.utils as utils
 
-PROJECT_NAME = 'openet'
-STORAGE_CLIENT = storage.Client(project=PROJECT_NAME)
+STORAGE_CLIENT = storage.Client(project='openet')
 
 logging.getLogger('earthengine-api').setLevel(logging.INFO)
 logging.getLogger('googleapiclient').setLevel(logging.INFO)
@@ -18,7 +17,7 @@ logging.getLogger('requests').setLevel(logging.INFO)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 
 
-def main(states, years=[], overwrite_flag=False, gee_key_file=None):
+def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=None):
     """Export field crop type geojson by state
 
     Parameters
@@ -29,6 +28,10 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
         If True, overwrite existing files (the default is False).
     gee_key_file : str, None, optional
         Earth Engine service account JSON key file (the default is None).
+    project_id : str, optional
+        Google cloud project ID to use for GEE authentication.
+        This will be checked after the gee_key_file and before the user Initialize.
+        The default is None.
 
     Returns
     -------
@@ -36,16 +39,25 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
     """
     logging.info('\nExport field crop type stats files by state')
 
+    # Min/max year range to process
+    # This should be 1997 to present year (or present year - 1) unless earlier CDL images are developed
+    year_min = 1997
+    year_max = 2024
+
     cdl_coll_id = 'USDA/NASS/CDL'
+
+    # Years where CDL has full CONUS coverage
+    # Don't change min year unless additional CONUS CDL images are ingested
+    cdl_year_min = 2008
+    cdl_year_max = 2024
+
     ca_coll_id = 'projects/openet/assets/crop_type/california'
     nlcd_coll_id = 'projects/sat-io/open-datasets/USGS/ANNUAL_NLCD/LANDCOVER'
 
-    project_id = 'projects/openet/assets'
-
-    field_folder_id = f'{project_id}/features/fields/2025-04-11'
+    field_folder_id = f'projects/openet/assets/features/fields/temp'
 
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20250411'
+    bucket_folder = 'temp_croptype_20250414'
 
     output_format = 'CSV'
 
@@ -61,15 +73,6 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
         states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
-    # This CDL start year is for the full CONUS images, but CDL does exist for
-    #   some states back to 1997 (see cdl_year_states dictionary below)
-    cdl_year_min = 2008
-    cdl_year_max = 2024
-
-    # Min/max year range to process
-    year_min = 1997
-    year_max = 2024
-
     if not years:
         years = range(year_min, year_max+1)
     else:
@@ -80,7 +83,6 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
         }
     years = sorted(list(years), reverse=True)
     logging.info(f'Years:  {", ".join(map(str, years))}')
-
 
     # All states are available for 2008 through present
     # These lists may not be complete for the eastern states
@@ -124,13 +126,24 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
         cdl_annual_remap[cdl_code] = cdl_code
     cdl_remap_in, cdl_remap_out = map(list, zip(*cdl_annual_remap.items()))
 
-
-    logging.info('\nInitializing Earth Engine')
+    # Initialize Earth Engine
     if gee_key_file:
-        logging.info(f'  Using service account key file: {gee_key_file}')
-        # The "EE_ACCOUNT" parameter is not used if the key file is valid
-        ee.Initialize(ee.ServiceAccountCredentials('', key_file=gee_key_file))
+        logging.info(f'\nInitializing GEE using user key file: {gee_key_file}')
+        try:
+            ee.Initialize(ee.ServiceAccountCredentials('_', key_file=gee_key_file))
+        except ee.ee_exception.EEException:
+            logging.warning('Unable to initialize GEE using user key file')
+            return False
+    elif project_id is not None:
+        logging.info(f'\nInitializing Earth Engine using project credentials'
+                     f'\n  Project ID: {project_id}')
+        try:
+            ee.Initialize(project=project_id)
+        except Exception as e:
+            logging.warning(f'\nUnable to initialize GEE using project ID\n  {e}')
+            return False
     else:
+        logging.info('\nInitializing Earth Engine using default credentials')
         ee.Initialize()
 
     # Get current running tasks
@@ -203,7 +216,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
                     .remap(cdl_remap_in, cdl_remap_out)
                 )
                 crop_source = f'{cdl_img_id} - remapped annual crops'
-            elif year < cdl_year_min and year not in cdl_state_years[state]:
+            elif (year < cdl_year_min) and (year not in cdl_state_years[state]):
                 # NOTE: This condition can currently never happen because
                 #   of year filtering at beginning of for loop
                 cdl_img_id = f'{cdl_coll_id}/{cdl_year_min}'
@@ -559,14 +572,17 @@ def arg_parse():
         description='Export field crop type stats files by state',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--states', nargs='+', required=True,
+        '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
     parser.add_argument(
         '--years', default='', nargs='+',
         help='Comma/space separated years and/or ranges of years')
     parser.add_argument(
         '--key', type=utils.arg_valid_file, metavar='FILE',
-        help='JSON key file')
+        help='GEE service account key file')
+    parser.add_argument(
+        '--project', default=None,
+        help='Google cloud project ID to use for GEE authentication')
     parser.add_argument(
         '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
@@ -587,4 +603,5 @@ if __name__ == '__main__':
         years=args.years,
         overwrite_flag=args.overwrite,
         gee_key_file=args.key,
+        project_id=args.project,
     )

@@ -8,8 +8,7 @@ from google.cloud import storage
 
 import openet.core.utils as utils
 
-PROJECT_NAME = 'openet'
-STORAGE_CLIENT = storage.Client(project=PROJECT_NAME)
+STORAGE_CLIENT = storage.Client(project='openet')
 
 logging.getLogger('earthengine-api').setLevel(logging.INFO)
 logging.getLogger('googleapiclient').setLevel(logging.INFO)
@@ -17,7 +16,7 @@ logging.getLogger('requests').setLevel(logging.INFO)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 
 
-def main(states, overwrite_flag=False, gee_key_file=None):
+def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
     """Export field crop type geojson by state
 
     Parameters
@@ -34,10 +33,8 @@ def main(states, overwrite_flag=False, gee_key_file=None):
     """
     logging.info('\nExport field landsat count stats by state')
 
-    project_id = 'projects/openet/assets'
-
-    field_folder_id = f'{project_id}/features/fields/temp'
-    # field_folder_id = f'{project_id}/features/fields/2024-02-01'
+    field_folder_id = f'projects/openet/assets/features/fields/temp'
+    # field_folder_id = f'projects/openet/assets/features/fields/2024-02-01'
 
     bucket_name = 'openet'
     bucket_folder = 'crop_type/pixelcount'
@@ -56,12 +53,24 @@ def main(states, overwrite_flag=False, gee_key_file=None):
         states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
-    logging.info('\nInitializing Earth Engine')
+    # Initialize Earth Engine
     if gee_key_file:
-        logging.info(f'  Using service account key file: {gee_key_file}')
-        # The "EE_ACCOUNT" parameter is not used if the key file is valid
-        ee.Initialize(ee.ServiceAccountCredentials('', key_file=gee_key_file))
+        logging.info(f'\nInitializing GEE using user key file: {gee_key_file}')
+        try:
+            ee.Initialize(ee.ServiceAccountCredentials('_', key_file=gee_key_file))
+        except ee.ee_exception.EEException:
+            logging.warning('Unable to initialize GEE using user key file')
+            return False
+    elif project_id is not None:
+        logging.info(f'\nInitializing Earth Engine using project credentials'
+                     f'\n  Project ID: {project_id}')
+        try:
+            ee.Initialize(project=project_id)
+        except Exception as e:
+            logging.warning(f'\nUnable to initialize GEE using project ID\n  {e}')
+            return False
     else:
+        logging.info('\nInitializing Earth Engine using default credentials')
         ee.Initialize()
 
     # Get current running tasks
@@ -155,14 +164,17 @@ def arg_parse():
         description='Export field landsat count stats by state',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--states', nargs='+', required=True,
+        '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
-    parser.add_argument(
-        '--key', type=utils.arg_valid_file, metavar='FILE',
-        help='JSON key file')
     parser.add_argument(
         '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
+    parser.add_argument(
+        '--key', type=utils.arg_valid_file, metavar='FILE',
+        help='GEE service account key file')
+    parser.add_argument(
+        '--project', default=None,
+        help='Google cloud project ID to use for GEE authentication')
     parser.add_argument(
         '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
@@ -175,4 +187,9 @@ if __name__ == '__main__':
     args = arg_parse()
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(states=args.states, overwrite_flag=args.overwrite, gee_key_file=args.key)
+    main(
+        states=args.states,
+        overwrite_flag=args.overwrite,
+        gee_key_file=args.key,
+        project_id=args.project,
+    )

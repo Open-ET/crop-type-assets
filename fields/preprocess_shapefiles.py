@@ -22,11 +22,10 @@ logging.getLogger('googleapiclient').setLevel(logging.INFO)
 logging.getLogger('requests').setLevel(logging.INFO)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 
-PROJECT_NAME = 'openet'
-STORAGE_CLIENT = storage.Client(project=PROJECT_NAME)
+STORAGE_CLIENT = storage.Client(project='openet')
 
 
-def main(states, years=[], overwrite_flag=False):
+def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=None):
     """Download and preprocess the state field shapefiles
 
     Parameters
@@ -35,22 +34,28 @@ def main(states, years=[], overwrite_flag=False):
     years : list, optional
     overwrite_flag : bool, optional
         If True, overwrite existing files (the default is False).
+    gee_key_file : str, None, optional
+        Earth Engine service account JSON key file (the default is None).
+    project_id : str, optional
+        Google cloud project ID to use for GEE authentication.
+        This will be checked after the gee_key_file and before the user Initialize.
+        The default is None.
 
     """
     logging.info('\nUpdating field crop type values')
+
+    year_min = 1997
+    year_max = 2024
 
     field_ws = os.getcwd()
     input_zip_ws = os.path.join(field_ws, 'source_zips')
     shapefile_ws = os.path.join(field_ws, 'shapefiles')
 
-    bucket_name = 'openet_field_boundaries'
-    bucket_folder = ''
-    # bucket_folder = 'gs://openet_field_boundaries'
-
-    project_id = 'projects/openet/assets'
+    bucket_name = 'openet_geodatabase'
+    bucket_folder = 'temp_shp_20250409'
 
     # For now write the fields to a temp folder
-    collection_folder = f'{project_id}/features/fields/temp'
+    collection_folder = f'projects/openet/assets/features/fields/temp'
 
     if states == ['ALL']:
         # 'AL' is not included since there is not an Alabama field shapefile
@@ -66,8 +71,7 @@ def main(states, years=[], overwrite_flag=False):
         states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
-    year_min = 1997
-    year_max = 2024
+
     if not years:
         years = list(range(year_min, year_max+1))
     else:
@@ -111,14 +115,25 @@ def main(states, years=[], overwrite_flag=False):
     area_threshold = 1000
     # area_threshold = 2000
 
-    # CGM - Initialize is only needed if ingesting shapefiles
-    logging.info('\nInitializing Earth Engine')
-    # if gee_key_file:
-    #     logging.info(f'  Using service account key file: {gee_key_file}')
-    #     # The "EE_ACCOUNT" parameter is not used if the key file is valid
-    #     ee.Initialize(ee.ServiceAccountCredentials('', key_file=gee_key_file))
-    # else:
-    ee.Initialize()
+    # Initialize Earth Engine
+    if gee_key_file:
+        logging.info(f'\nInitializing GEE using user key file: {gee_key_file}')
+        try:
+            ee.Initialize(ee.ServiceAccountCredentials('_', key_file=gee_key_file))
+        except ee.ee_exception.EEException:
+            logging.warning('Unable to initialize GEE using user key file')
+            return False
+    elif project_id is not None:
+        logging.info(f'\nInitializing Earth Engine using project credentials'
+                     f'\n  Project ID: {project_id}')
+        try:
+            ee.Initialize(project=project_id)
+        except Exception as e:
+            logging.warning(f'\nUnable to initialize GEE using project ID\n  {e}')
+            return False
+    else:
+        logging.info('\nInitializing Earth Engine using default credentials')
+        ee.Initialize()
 
 
     # # Build the export collection if it doesn't exist
@@ -179,31 +194,30 @@ def main(states, years=[], overwrite_flag=False):
     #     except Exception as e:
     #         logging.exception(f'  Exception: {e}\n  Exiting')
     #         return False
-    #
-    #
+
+
     # # Download the field shapefiles from the bucket
-    # # gsutil -m cp gs://openet_field_boundaries/*.zip ./source_zips/
+    # # Equivalent to: gsutil -m cp gs://openet_field_boundaries/*.zip ./source_zips/
     # logging.info('\nDownloading shapefiles from bucket')
+    # if not os.path.isdir(input_zip_ws):
+    #     os.makedirs(input_zip_ws)
     # for state in states:
     #     logging.info(f'State: {state}')
     #     if bucket_folder:
-    #         bucket_path = f'gs://{bucket_name}/{bucket_folder}/{state}.zip'
+    #         bucket_path = f'{bucket_folder}/{state}.zip'
     #     else:
-    #         bucket_path = f'gs://{bucket_name}/{state}.zip'
+    #         bucket_path = f'{state}.zip'
     #     zip_path = os.path.join(input_zip_ws, f'{state}.zip')
     #     logging.debug(f'  {bucket_path}')
     #     logging.debug(f'  {zip_path}')
     #     if os.path.isfile(zip_path) and not overwrite_flag:
     #         logging.info('  zip file already exists - skipping')
     #         continue
-    #     # TODO: This may need the shell parameter on windows
-    #     subprocess.call(
-    #         ['gsutil', 'cp', bucket_path, input_zip_ws],
-    #         # cwd=field_ws,
-    #         # shell=shell_flag,
-    #     )
-    #
-    #
+    #     src_bucket = STORAGE_CLIENT.bucket(bucket_name)
+    #     src_blob = src_bucket.get_blob(bucket_path)
+    #     src_blob.download_to_filename(zip_path)
+
+
     # logging.info('\nExtracting shapefiles from zips')
     # for state in states:
     #     logging.info(f'State: {state}')
@@ -239,7 +253,7 @@ def main(states, years=[], overwrite_flag=False):
 
     logging.info('\nProcessing crop type by state')
     for state in states:
-        logging.info(f'State: {state}')
+        logging.info(f'\nState: {state}')
 
         state_ws = os.path.join(shapefile_ws, state)
         shp_path = os.path.join(state_ws, f'{state}.shp')
@@ -450,9 +464,10 @@ def main(states, years=[], overwrite_flag=False):
         # Write the crop type and source fields
         new_crop_type_fields = [f for f in crop_type_fields if f not in existing_fields]
         new_crop_src_fields = [f for f in crop_src_fields if f not in existing_fields]
-        # if not new_crop_type_fields and not new_crop_src_fields:
-        #     logging.info('  No new fields to add - skipping')
-        #     continue
+        if not new_crop_type_fields and not new_crop_src_fields:
+            logging.info('  No new fields to add')
+            # logging.info('  No new fields to add - skipping')
+            # continue
 
         # Add new crop type fields and set value to 0
         if new_crop_type_fields:
@@ -641,7 +656,7 @@ def arg_parse():
         description='Download and preprocess the state field shapefiles',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--states', nargs='+', required=True,
+        '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
     parser.add_argument(
         '--years', default='', nargs='+',
@@ -649,6 +664,12 @@ def arg_parse():
     parser.add_argument(
         '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
+    parser.add_argument(
+        '--key', type=utils.arg_valid_file, metavar='FILE',
+        help='GEE service account key file')
+    parser.add_argument(
+        '--project', default=None,
+        help='Google cloud project ID to use for GEE authentication')
     parser.add_argument(
         '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
@@ -661,4 +682,10 @@ if __name__ == '__main__':
     args = arg_parse()
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(states=args.states, years=args.years, overwrite_flag=args.overwrite)
+    main(
+        states=args.states,
+        years=args.years,
+        overwrite_flag=args.overwrite,
+        gee_key_file=args.key,
+        project_id=args.project,
+    )

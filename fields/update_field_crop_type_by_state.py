@@ -35,14 +35,13 @@ def main(states, years=[], overwrite_flag=False):
     logging.info('\nUpdating field crop type values by state')
 
     output_format = 'CSV'
-    # output_format = 'GeoJSON'
 
     # CGM - Using overwrite_flag to control this
     # clear_existing_values = True
 
     # CSV stats bucket path
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20250409'
+    bucket_folder = 'temp_croptype_20250411'
 
     shell_flag = True
 
@@ -61,9 +60,7 @@ def main(states, years=[], overwrite_flag=False):
             'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY',
         ]
     else:
-        states = sorted(list(set(
-            y.strip() for x in states for y in x.split(',') if y.strip()
-        )))
+        states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
     # This CDL start year is for the full CONUS images, but CDL does exist for
@@ -152,22 +149,10 @@ def main(states, years=[], overwrite_flag=False):
         # if os.path.exists(output_path):
         #     shp_driver.DeleteDataSource(output_path)
 
-        # # Only download stats files on overwrite or if not present
-        # # if overwrite_flag:
-        # logging.debug(f'  Downloading stats {output_format}s from bucket')
-        # subprocess.call(
-        #     ['gsutil', '-m', 'cp',
-        #      f'gs://{stats_bucket}/crop_type/{state.lower()}_cdl_*.csv',
-        #      stats_ws],
-        #     # cwd=field_ws,
-        #     # shell=shell_flag,
-        # )
-
         crop_type_fields = [f'CROP_{year}' for year in cdl_state_years[state]]
         logging.debug(f'\nCrop Type Fields: {", ".join(crop_type_fields)}')
         # crop_src_fields = [f'CSRC_{year}' for year in years]
         # logging.debug(f'Fields: {", ".join(crop_src_fields)}')
-
 
         logging.info(f'Reading stats {output_format} and updating shapefile (by year)')
         # update_features = {}
@@ -182,12 +167,6 @@ def main(states, years=[], overwrite_flag=False):
             if not os.path.isfile(stats_path) or overwrite_flag:
                 logging.debug(f'  Downloading stats {output_format} from bucket')
 
-                # print(bucket_name)
-                # print(bucket_folder)
-                # print("\n")
-                # print(stats_name)
-                # print(stats_ws)
-                # subprocess.call('gsutil')
                 subprocess.call(
                     # ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{stats_name}', stats_ws],
                     ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{bucket_folder}/{stats_name}', stats_ws],
@@ -235,7 +214,7 @@ def main(states, years=[], overwrite_flag=False):
 
 
     if 'CA' in states:
-        logging.info(f'\nProcessing LandIQ/CDL crop_type for California')
+        logging.info(f'\nProcessing Crop Mapping / CDL crop_type for California')
         state = 'CA'
 
         shp_path = os.path.join(shapefile_ws, state, f'{state}.shp')
@@ -260,23 +239,13 @@ def main(states, years=[], overwrite_flag=False):
                 input_layer.SetFeature(input_ftr)
             input_ds = None
 
-        # # Only download stats files on overwrite or if not present
-        # # if overwrite_flag:
-        # logging.info(f'  Downloading stats {output_format}s from bucket')
-        # subprocess.call(
-        #     ['gsutil', '-q', '-m', 'cp',
-        #      f'gs://{bucket_name}/{bucket_folder}/ca_california_*.csv', stats_ws],
-        #     # cwd=field_ws,
-        #     # shell=shell_flag,
-        # )
-
-        # First update the shapefile with the LandIQ values
+        # First update the shapefile with the California Crop Mapping values
         for year in years:
             if year < 2009:
                 continue
             logging.info(f'{year}')
 
-            stats_name = f'{state}_landiq_{year}.csv'.lower()
+            stats_name = f'{state}_cadwr_{year}.csv'.lower()
             stats_path = os.path.join(stats_ws, stats_name)
             logging.debug(f'  {stats_path}')
 
@@ -313,7 +282,7 @@ def main(states, years=[], overwrite_flag=False):
                     for ftr in update_features['features']
                 }
 
-            # Drop features that have less than 50% LandIQ coverage
+            # Drop features that have less than 50% Crop Mapping coverage
             update_features = {
                 k: v for k, v in update_features.items()
                 if ((v['PIXEL_TOTAL'] > 0) and (v['PIXEL_COUNT'] / v['PIXEL_TOTAL']) >= 0.50)
@@ -335,7 +304,7 @@ def main(states, years=[], overwrite_flag=False):
             write_features(shp_path, update_features, year, overwrite_flag)
 
 
-        # Then update any missing values with the LandIQ/CDL composite values
+        # Then update any missing values with the CA/CDL composite values
         for year in years:
             if year < 2008:
                 continue
@@ -393,35 +362,6 @@ def main(states, years=[], overwrite_flag=False):
             # TODO: Test if writing all years at once is any faster
             logging.debug('  Writing field crop type values')
             write_features(shp_path, update_features, year, overwrite=False)
-
-
-    # DEADBEEF - This isn't currently being used
-    # # Read in existing shapefile values
-    # logging.info('\nReading state shapefile values')
-    # state_features = []
-    # input_ds = shp_driver.Open(shp_path, 0)
-    # input_layer = input_ds.GetLayer()
-    # for input_ftr in input_layer:
-    #     values = {
-    #         # 'FID': input_ftr.GetFID(),
-    #         'OPENET_ID': input_ftr.GetField('OPENET_ID'),
-    #         # 'MGRS_TILE': input_ftr.GetField('MGRS_TILE'),
-    #         # 'MGRS_ZONE': input_ftr.GetField('MGRS_ZONE'),
-    #         # 'SOURCECODE': input_ftr.GetField('SOURCECODE'),
-    #     }
-    #     for crop_type_field in crop_type_fields:
-    #         values[crop_type_field] = input_ftr.GetField(crop_type_field)
-    #         # values[crop_type_field] = input_ftr.GetFieldAsInteger(crop_type_field)
-    #     # Only compute crop type for the feature if all crop type values are 0
-    #     # if all(values[field] > 0 for field in crop_type_fields):
-    #     #     continue
-    #     state_features.append(values)
-    # input_ds = None
-    #
-    # if not state_features:
-    #     logging.debug('  No missing crop types in state - skipping state')
-    #     continue
-    # logging.info(f'  Fields: {len(state_features)}')
 
 
 def write_features(shp_path, features, year, overwrite=False):

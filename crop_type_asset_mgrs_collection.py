@@ -32,7 +32,7 @@ def main(
         overwrite_flag=False,
         delay=0,
         gee_key_file=None
-        ):
+):
     """Build and ingest crop type MGRS tiles from a feature collection
 
     Parameters
@@ -57,11 +57,10 @@ def main(
     # Hardcoded parameters
     project_id = 'projects/openet/assets'
 
-    export_coll_id = f'{project_id}/crop_type/v2023a'
+    export_coll_id = f'{project_id}/crop_type/v2024a'
     # export_band_name = 'crop_type'
 
-    crop_type_folder_id = f'{project_id}/features/fields/2024-02-01'
-    # crop_type_folder_id = f'{project_id}/features/fields/temp'
+    crop_type_folder_id = f'{project_id}/features/fields/temp'
 
     # Using ERA5-Land MGRS tiles to avoid clipping outside CONUS
     mgrs_ftr_coll_id = f'{project_id}/mgrs/global/era5land/zones'
@@ -71,7 +70,7 @@ def main(
 
     cdl_coll_id = 'USDA/NASS/CDL'
 
-    # California specific crop type images built from LandIQ crop mapping data
+    # California specific crop type images built from Califoria crop mapping data
     ca_coll_id = f'{project_id}/crop_type/california'
 
     # The states collection is being used to select the field collections (by name)
@@ -94,7 +93,7 @@ def main(
     annual_remap_path = os.path.join(os.getcwd(), 'cdl_annual_crop_remap_table.csv')
 
     year_min = 1985
-    year_max = 2023
+    year_max = 2024
 
     # Parse user inputs
     if not years:
@@ -353,15 +352,15 @@ def main(
             properties['field_states'] = ','.join(field_states)
 
 
-            # Mosaic the California LandIQ image for the UTM zone before any CDL images
+            # Mosaic the California Crop Mapping image for the UTM zone before any CDL images
             if mgrs_tile in ['10S', '10T', '11S']:
-                if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022]:
+                if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
                     # Using the UTM zone projected version of the California image
                     ca_img_id = f'{ca_coll_id}/{year}_utm{mgrs_tile[:2]}'
                     # ca_img_id = f'{ca_coll_id}/{year}'
                     ca_img = ee.Image(ca_img_id)
-                elif year > 2022:
-                    ca_img_id = f'{ca_coll_id}/2022_utm{mgrs_tile[:2]}'
+                elif year > 2023:
+                    ca_img_id = f'{ca_coll_id}/2023_utm{mgrs_tile[:2]}'
                     # ca_img_id = f'{ca_coll_id}/2021'
                     ca_img = ee.Image(ca_img_id).remap(cdl_remap_in, cdl_remap_out)
                 elif year in [2015, 2017]:
@@ -541,10 +540,6 @@ def mgrs_export_tiles(
             'NM', 'NV', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD',
             'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY',
         ]
-    # elif (study_area_property == 'STUSPS' and
-    #         'WESTERN11' in [x.upper() for x in study_area_features]):
-    #     study_area_features = [
-    #         'AZ', 'CA', 'CO', 'ID', 'MT', 'NM', 'NV', 'OR', 'UT', 'WA', 'WY']
     study_area_features = sorted(list(set(study_area_features)))
 
     if study_area_property and study_area_features:

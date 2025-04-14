@@ -8,9 +8,9 @@ The preprococess tool will first ingest the bucket shapefiles into a temp folder
 
 The tool will also download and unzip the shapefiles and add the crop field fields to each shapefile if they are not present.  The default crop type value for each field will be set to 0 if the field is added.
 
-
+```
 python preprocess_shapefiles.py --states AZ
-```[export_field_crop_type_by_state.py](export_field_crop_type_by_state.py)
+```
 
 ## Zonal Stats
 
@@ -38,23 +38,23 @@ The separate classes for annual crops are all being remapped to CDL crop type 47
 
 #### California
 
-The crop type remappings are different for California since we are currently using the LandIQ images and not CDL for all years after 2008.
+The crop type remappings are different for California since we are currently using the California DWR Crop Mapping data (https://data.cnra.ca.gov/dataset/statewide-crop-mapping) and not CDL for all years after 2008.
 
-* 2008 - Use remapped annual CDL instead of LandIQ for all years prior to 2009
-* 2009-2013 - Use remapped annual 2014 LandIQ
-* 2014 - Use 2014 LandIQ directly
-* 2015 - Use remapped annual 2014 LandIQ
-* 2016 - Use 2016 LandIQ directly
-* 2017 - Use remapped annual 2016 LandIQ
-* 2018-2023 - Use LandIQ directly
-* 2024 - Use remapped annual 2023 LandIQ
+* 2008 - Use remapped annual CDL instead of CA Crop Mapping for all years prior to 2009
+* 2009-2013 - Use remapped annual 2014 CA Crop Mapping
+* 2014 - Use 2014 CA Crop Mapping directly
+* 2015 - Use remapped annual 2014 CA Crop Mapping
+* 2016 - Use 2016 CA Crop Mapping directly
+* 2017 - Use remapped annual 2016 CA Crop Mapping
+* 2018-2023 - Use CA Crop Mapping directly
+* 2024 - Use remapped annual 2023 CA C
 
 
 #### Other States
 
 * pre-2008 - Use remapped annual 2008 CDL for years prior to 2008
 * 2008-2023 - Use remapped annual CDL
-* post-2023 - Use remapped annual 2023 CDL for all years after 2023
+* post-2024 - Use remapped annual 2024 CDL for all years after 2024
 
 ## Replace bad CDL crop type values in New Mexico and Colorado
 

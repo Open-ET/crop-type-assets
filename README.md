@@ -4,7 +4,7 @@ This tool is used to generate the crop type image assets.  The crop type images 
 
 ## Approach
 
-For each year, the following images are stacked and reduced using a firstNonNull reducer, so that pixels inside/touching a field get a single crop type, while those outside the field boundaries get the "best" or closest in time value from LandIQ or CDL.
+For each year, the following images are stacked and reduced using a firstNonNull reducer, so that pixels inside/touching a field get a single crop type, while those outside the field boundaries get the "best" or closest in time value.
 
 - All fields with a crop type > 0 (and not equal to 176) for that year are rasterized
 - All non-California MGRS tiles
@@ -13,14 +13,14 @@ For each year, the following images are stacked and reduced using a firstNonNull
     - Years 2008 to the last CDL year, use the CDL image directly
     - Years after the last CDL year, use the remapped last CDL image
 - California MGRS tiles 10S, 10T, 11S
-  - LandIQ for California MGRS tiles 10S, 10T, 11S
-      - 2014, 2016, 2018, 2019, 2020, 2021, 2022: use the LandIQ image directly
+  - California DWR Crop Mapping data for California MGRS tiles 10S, 10T, 11S
+      - 2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023: use the CA Crop Mapping image directly
       - 2009-2013: use the remapped 2014.  
         - Note, the urban and managed wetland pixels are masked after remapping for these 5 years (check if this masking is needed for other years).
       - 2015 and 2017: use the remapped previous year (2014 and 2016)
-      - 2023+: use the remapped 2022 year
+      - 2024+: use the remapped 2023 year
   - Cropland Data Layer (CDL)
-    - Almost the same as the approach for the non-California tiles above, except that we always use the annual crop remapped version of the CDL to fill any holes that might be in the LandIQ images
+    - Almost the same as the approach for the non-California tiles above, except that we always use the annual crop remapped version of the CDL to fill any holes that might be in the CA Crop Mapping images
 
 ### Annual Crop Remapping
 

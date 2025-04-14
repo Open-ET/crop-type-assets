@@ -63,15 +63,11 @@ def main(states, years=[], overwrite_flag=False):
             'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY',
         ]
     else:
-        states = sorted(list(set(
-            y.strip() for x in states for y in x.split(',') if y.strip()
-        )))
+        states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
     year_min = 1997
-    year_max = 2023
-    # year_min = 1997
-    # year_max = datetime.today().year
+    year_max = 2024
     if not years:
         years = list(range(year_min, year_max+1))
     else:

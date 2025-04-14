@@ -42,7 +42,6 @@ def main(states, overwrite_flag=False):
 
     # For now write the fields to a temp folder
     collection_folder = f'{project_id}/features/fields/temp'
-    # collection_folder = f'{project_id}/features/fields/2024-02-01'
 
     if states == ['ALL']:
         # 'AL' is not included since there is not an Alabama field shapefile
@@ -53,9 +52,7 @@ def main(states, overwrite_flag=False):
             'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY',
         ]
     else:
-        states = sorted(list(set(
-            y.strip() for x in states for y in x.split(',') if y.strip()
-        )))
+        states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
     if not os.path.isdir(output_zip_ws):

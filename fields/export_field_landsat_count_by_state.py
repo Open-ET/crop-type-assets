@@ -43,7 +43,6 @@ def main(states, overwrite_flag=False, gee_key_file=None):
     bucket_folder = 'crop_type/pixelcount'
 
     output_format = 'CSV'
-    # output_format = 'GeoJSON'
 
     if states == ['ALL']:
         # 'AL' is not included since there is not an Alabama field shapefile
@@ -54,11 +53,8 @@ def main(states, overwrite_flag=False, gee_key_file=None):
             'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY',
         ]
     else:
-        states = sorted(list(set(
-            y.strip() for x in states for y in x.split(',') if y.strip()
-        )))
+        states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
-
 
     logging.info('\nInitializing Earth Engine')
     if gee_key_file:
@@ -68,13 +64,11 @@ def main(states, overwrite_flag=False, gee_key_file=None):
     else:
         ee.Initialize()
 
-
     # Get current running tasks
     tasks = utils.get_ee_tasks()
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         logging.debug(f'  Tasks: {len(tasks)}')
         input('ENTER')
-
 
     logging.info('\nGetting bucket file list')
     bucket = STORAGE_CLIENT.get_bucket(bucket_name)
@@ -141,31 +135,6 @@ def main(states, overwrite_flag=False, gee_key_file=None):
             )
             # pprint.pprint(count_coll.first().getInfo())
             # input('ENTER')
-
-            # # CGM - Not sure why this approach isn't working
-            # field_coll = ee.FeatureCollection(field_coll_id)\
-            #     .filter(ee.Filter.stringStartsWith('MGRS_TILE', utm_zone))
-            # count_coll = (
-            #     field_coll
-            #     .reduceToImage(['MASK'], ee.Reducer.first())
-            #     .uint8()
-            #     .reduceRegions(
-            #         reducer=ee.Reducer.sum().unweighted(),
-            #         collection=field_coll,
-            #         crs=f'EPSG:326{utm_zone}',
-            #         crsTransform=[30, 0, 15, 0, -30, 15],
-            #         bestEffort=False,
-            #     )
-            # )
-            #
-            # # Cleanup the output collection before exporting
-            # def set_properties(ftr):
-            #     return ee.Feature(None, {
-            #         'OPENET_ID': ftr.get('OPENET_ID'),
-            #         'PIXELCOUNT': ftr.get('sum'),
-            #         'UTM_ZONE': utm_zone,
-            #     })
-            # count_coll = ee.FeatureCollection(count_coll.map(set_properties))
 
             # logging.debug('  Building export task')
             task = ee.batch.Export.table.toCloudStorage(

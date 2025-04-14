@@ -38,7 +38,6 @@ def main(states, overwrite_flag=False):
     logging.info('\nUpdating field landsat count stats by state')
 
     output_format = 'CSV'
-    # output_format = 'GeoJSON'
 
     # CGM - Using overwrite_flag to control this
     # clear_existing_values = True
@@ -67,11 +66,8 @@ def main(states, overwrite_flag=False):
             'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY',
         ]
     else:
-        states = sorted(list(set(
-            y.strip() for x in states for y in x.split(',') if y.strip()
-        )))
+        states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
-
 
     logging.info('\nGetting bucket file list')
     bucket = STORAGE_CLIENT.get_bucket(bucket_name)
@@ -104,7 +100,6 @@ def main(states, overwrite_flag=False):
                 input_ftr.SetField(f'PIXELCOUNT', 0)
                 input_layer.SetFeature(input_ftr)
             input_ds = None
-
 
         logging.info(f'Reading stats {output_format} and updating shapefile')
         # update_features = {}

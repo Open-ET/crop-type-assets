@@ -38,19 +38,16 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
 
     cdl_coll_id = 'USDA/NASS/CDL'
     ca_coll_id = 'projects/openet/assets/crop_type/california'
-
     nlcd_coll_id = 'projects/sat-io/open-datasets/USGS/ANNUAL_NLCD/LANDCOVER'
 
     project_id = 'projects/openet/assets'
 
-    field_folder_id = f'{project_id}/features/fields/temp'
-    # field_folder_id = f'{project_id}/features/fields/2024-02-01'
+    field_folder_id = f'{project_id}/features/fields/2025-04-11'
 
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20250409'
+    bucket_folder = 'temp_croptype_20250411'
 
     output_format = 'CSV'
-    # output_format = 'GeoJSON'
 
     if states == ['ALL']:
         # 'AL' is not included since there is not an Alabama field shapefile
@@ -66,13 +63,12 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
 
     # This CDL start year is for the full CONUS images, but CDL does exist for
     #   some states back to 1997 (see cdl_year_states dictionary below)
-    cdl_year_min = 1997
+    cdl_year_min = 2008
     cdl_year_max = 2024
 
     # Min/max year range to process
-    year_min = 2008
+    year_min = 1997
     year_max = 2024
-    # year_max = datetime.datetime.today().year
 
     if not years:
         years = range(year_min, year_max+1)
@@ -89,7 +85,6 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
     # All states are available for 2008 through present
     # These lists may not be complete for the eastern states
     # Not including CA 2007, WA 2006, ID 2005
-    # Including 2023 since it will be available soon (as of Dec 2023)
     cdl_year_states = {year: states for year in range(cdl_year_min, cdl_year_max+1)}
     cdl_year_states[2007] = ['AR', 'IA', 'ID', 'IL', 'IN', 'KS', 'LA', 'MI',
                              'MN', 'MO', 'MS', 'MT', 'ND', 'NE', 'OH', 'OK', 'OR',
@@ -264,7 +259,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
             nlcd_img = (
                 ee.ImageCollection(nlcd_coll_id)
                 .filterDate(nlcd_date, nlcd_date.advance(1, 'year')).first()
-                .select(['landcover'])
+                .select([0], ['landcover'])
             )
 
             # Change any CDL 176 and NLCD 81/82 pixels to 37
@@ -304,32 +299,25 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
             utils.ee_task_start(task)
 
 
-    # First compute California LandIQ zonal stats without merging with CDL
+    # First compute California Crop Mapping zonal stats without merging with CDL
     if 'CA' in states:
         state = 'CA'
-        logging.info(f'\nCA Statewide Crop Mapping Datasets')
+        logging.info(f'\nCA Crop Mapping Datasets')
 
         field_coll_id = f'{field_folder_id}/{state}'
         field_coll = ee.FeatureCollection(field_coll_id)
-
-        # DEADBEEF
-        # Compute the zonal stats separately for each UTM zone
-        # This may not be necessary and the results may be the same as
-        #   as pulling from the unprojected (EPSG:6414) image asset
-        # Would need to change the LandIQ image ID
-        # Would need to add a filter to field_coll
-        #   .filter(ee.Filter.stringStartsWith('MGRS_TILE', f'{utm_zone}'))
 
         for year in years:
             # NOTE: This could be restructured to not compute all the years
             #   since many of them will be identical (i.e. 2008-2013)
 
             if year < 2009:
-                logging.debug('Not using LandIQ before 2009 - skipping')
+                logging.debug('Not using California Crop Mapping before 2009 - skipping')
                 continue
 
             # Computing zonal stats on the EPSG:6414 raster
-            # To switch to the UTM zone images, update the LandIQ image/export ID
+            # To switch to the UTM zone images,
+            #   update the California Crop Mapping image/export ID
             export_id = f'{state}_landiq_{year}'.lower()
             logging.info(f'{export_id}')
 
@@ -350,7 +338,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
                     logging.info('  File already exists in bucket, skipping')
                     continue
 
-            # TODO: Check what should be the first year to start using LandIQ
+            # TODO: Check what should be the first year to start using California Crop Mapping
             #   Starting before 2009 makes switching to CDL 2008 a little tricky
 
             # Select the California image
@@ -365,7 +353,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
                 ca_img_id = f'{ca_coll_id}/{year-1}'
                 ca_img = ee.Image(ca_img_id).remap(cdl_remap_in, cdl_remap_out)
             elif year < 2009:
-                logging.debug('Not using LandIQ before 2009 - skipping')
+                logging.debug('Not using California Crop Mapping before 2009 - skipping')
                 continue
             elif year in [2009, 2010, 2011, 2012, 2013]:
                 # Use a 2014 remapped annual crop image for all pre-2014 years
@@ -377,7 +365,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
                     .updateMask(ee.Image(ca_img_id).neq(87))
                 )
             else:
-                raise Exception(f'unexpected California (LandIQ) year: {year}')
+                raise Exception(f'unexpected California Crop Mapping year: {year}')
 
             if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
                 crop_src = f'{ca_img_id}'
@@ -426,10 +414,10 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
             utils.ee_task_start(task)
 
 
-    # Then compute zonal stats with LandIQ/CDL composite
+    # Then compute zonal stats with CA Crop Mapping / CDL composite
     if 'CA' in states:
         state = 'CA'
-        logging.info(f'\nCA LandIQ/CDL Composite')
+        logging.info(f'\nCA Crop Mapping / CDL Composite')
 
         field_coll_id = f'{field_folder_id}/{state}'
         field_coll = ee.FeatureCollection(field_coll_id)
@@ -458,13 +446,13 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
                     logging.info('  File already exists in bucket, skipping')
                     continue
 
-            # Select the LandIQ image
+            # Select the California Crop Mapping image
             # The pre2009 filtering is handled below when the mosaic is made
             # if year < 2009:
-            #     logging.debug('Not using LandIQ before 2009 - skipping')
+            #     logging.debug('Not using California Crop Mapping before 2009 - skipping')
             #     continue
             if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
-                # Use the LandIQ directly for years when it is present
+                # Use the California Crop Mapping directly for years when it is present
                 ca_img_id = f'{ca_coll_id}/{year}'
                 ca_img = ee.Image(ca_img_id)
             elif year > 2023:
@@ -488,17 +476,6 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
             # Use a 2008 remapped annual crop image for all pre-2008 years
             # Use a 2023 remapped annual crop image for all post-2023 years
             cdl_img_id = f'{cdl_coll_id}/{min(max(year, cdl_year_min), cdl_year_max)}'
-            # # CGM - Don't need to check cdl_state_years since California 2007
-            # #   image is not being used anymore
-            # if year < cdl_year_min:
-            #     cdl_img_id = f'{cdl_coll_id}/{cdl_year_min}'
-            # elif year >= cdl_year_max:
-            #     cdl_img_id = f'{cdl_coll_id}/{cdl_year_max}'
-            # else:
-            #     cdl_img_id = f'{cdl_coll_id}/{year}'
-            #     if year not in cdl_state_years[state]:
-            #         logging.debug(f'  CDL {year} not available for {state} - skipping')
-            #         continue
             cdl_img = ee.Image(cdl_img_id).select(['cropland'], ['cdl'])
 
             # Mask any cloud/nodata pixels (mostly in pre-2008 years)
@@ -512,10 +489,18 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
 
             # Select the NLCD year
             # Use the first/last available year if outside the available range
-            nlcd_year = min(year, max(nlcd_img_ids.keys()))
-            nlcd_year = max(nlcd_year, min(nlcd_img_ids.keys()))
-            nlcd_img_id = nlcd_img_ids[nlcd_year]
-            nlcd_img = ee.Image(nlcd_img_id).select('landcover')
+            nlcd_coll = ee.ImageCollection(nlcd_coll_id)
+            nlcd_year = (
+                ee.Number(year)
+                .max(ee.Date(nlcd_coll.aggregate_min('system:time_start')).get('year'))
+                .min(ee.Date(nlcd_coll.aggregate_max('system:time_start')).get('year'))
+            )
+            nlcd_date = ee.Date.fromYMD(nlcd_year, 1, 1)
+            nlcd_img = (
+                ee.ImageCollection(nlcd_coll_id)
+                .filterDate(nlcd_date, nlcd_date.advance(1, 'year')).first()
+                .select([0], ['landcover'])
+            )
 
             # Change any CDL 176 and NLCD 81/82 pixels to 37
             cdl_img = cdl_img.where(
@@ -523,8 +508,8 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
                 # cdl_img.eq(176).And(nlcd_img.neq(71)), 37
             )
 
-            # Mosaic the image with LandIQ first
-            # For pre2008 images don't use LandIQ
+            # Mosaic the image with California Crop Mapping images on top
+            # For pre2008 images don't use Crop Mapping images
             if year < 2009:
                 crop_type_img = cdl_img.reduce(ee.Reducer.firstNonNull())
                 crop_source = f'{cdl_img_id} - remapped annual crops'
@@ -534,7 +519,8 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
                               f'CDL{cdl_img_id.split("/")[-1]} composite' \
                               f' - remapped annual crops'
 
-            # Compute zonal stats on the mosaiced images using the LandIQ crs and Transform
+            # Compute zonal stats on the mosaiced images using the Crop Mapping
+            #   image crs and transform
             crop_type_coll = crop_type_img\
                 .reduceRegions(
                     reducer=ee.Reducer.mode().unweighted(),
@@ -565,38 +551,6 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None):
 
             logging.info('  Starting export task')
             utils.ee_task_start(task)
-
-
-    # DEADBEEF - Old code for building CDL image stacks
-    # # Use the CDL images directly for other states
-    # # Is it better to build this as Image or a Collection.toBands()
-    # crop_type_img = ee.Image([
-    #     ee.Image(f'{cdl_coll_id}/{cdl_year_remap[year]}')
-    #         .select(['cropland'], [f'CROP_{year}'])
-    #         .uint8()
-    #     for year in years])
-    # # crop_type_coll = ee.ImageCollection([
-    # #     ee.Image(f'{cdl_coll_id}/{year}')
-    # #         .select(['cropland'], [f'CROP_{year}'])
-    # #     for year in years])
-    # # crop_type_img = crop_type_coll.toBands()\
-    # #     .rename([f'CROP_{year}' for year in years])
-
-    # Mosaicing the collection could be used to get the b images
-    # crop_type_img = ee.Image([
-    #     ee.Image(ee.ImageCollection(cdl_coll_id)\
-    #         .filterDate(f'{year}-01-01', f'{year+1}-01-01')\
-    #         .filterBounds(mgrs_geom)
-    #         .mosaic()).rename([f'CROP_{year}'])
-    #     for year in years])
-    # # crop_type_coll = ee.ImageCollection([
-    # #     ee.Image(ee.ImageCollection(crop_type_coll_id)\
-    # #         .filterDate(f'{year}-01-01', f'{year+1}-01-01')\
-    # #         .filterBounds(mgrs_geom)
-    # #         .mosaic()).rename([f'CROP_{year}'])
-    # #     for year in years])
-    # # crop_type_img = crop_type_coll.toBands()\
-    # #     .rename([f'CROP_{year}' for year in years])
 
 
 def arg_parse():

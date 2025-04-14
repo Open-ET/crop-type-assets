@@ -25,11 +25,11 @@ The export tool will make a separate zonal stats call for each MGRS zone (i.e. "
 The update tool will then collect the geojson files and update the crop type values in the shapefile based on these values.
 
 ```
-python export_field_crop_type_by_state.py --states AZ
+python export_field_crop_type_by_state.py --states ALL
 ```
 
 ```
-python update_field_crop_type_by_state.py --states AZ
+python update_field_crop_type_by_state.py --states ALL
 ```
 
 ### Crop Type Remappings
@@ -49,7 +49,6 @@ The crop type remappings are different for California since we are currently usi
 * 2018-2023 - Use CA Crop Mapping directly
 * 2024 - Use remapped annual 2023 CA C
 
-
 #### Other States
 
 * pre-2008 - Use remapped annual 2008 CDL for years prior to 2008
@@ -59,17 +58,17 @@ The crop type remappings are different for California since we are currently usi
 ## Replace bad CDL crop type values in New Mexico and Colorado
 
 ```
-python replace_bad_crop_types.py --states NM CO
+python replace_bad_crop_types.py
 ```
 
 ## Fill missing crop type values
 
 ```
-python fill_missing_crop_types.py --states AZ
+python fill_missing_crop_types.py --states ALL
 ```
 
 ## Postprocess
 
 ```
-python postprocess_shapefiles.py --states AZ
+python postprocess_shapefiles.py --states ALL
 ```

@@ -40,7 +40,8 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
     logging.info('\nExport field crop type stats files by state')
 
     # Min/max year range to process
-    # This should be 1997 to present year (or present year - 1) unless earlier CDL images are developed
+    # Don't change min year unless additional CONUS CDL images are ingested
+    #   or additional crop type data is identified
     year_min = 1997
     year_max = 2024
 
@@ -331,7 +332,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
             # Computing zonal stats on the EPSG:6414 raster
             # To switch to the UTM zone images,
             #   update the California Crop Mapping image/export ID
-            export_id = f'{state}_landiq_{year}'.lower()
+            export_id = f'{state}_cadwr_{year}'.lower()
             logging.info(f'{export_id}')
 
             if overwrite_flag:

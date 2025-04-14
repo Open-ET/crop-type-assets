@@ -1,7 +1,7 @@
 import argparse
 import logging
 import os
-# import pprint
+import pprint
 
 from osgeo import ogr
 import pandas as pd
@@ -27,9 +27,7 @@ def main(states=[]):
     if states == ['ALL']:
         states = ['CO', 'NM', 'MX']
     else:
-        states = sorted(list(set(
-            y.strip() for x in states for y in x.split(',') if y.strip()
-        )))
+        states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -144,7 +142,7 @@ def arg_parse():
         description='Fill bad crop type values',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--states', nargs='+', required=True,
+        '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
     parser.add_argument(
         '--debug', default=logging.INFO, const=logging.DEBUG,

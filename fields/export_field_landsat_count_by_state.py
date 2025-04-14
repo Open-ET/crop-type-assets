@@ -34,7 +34,6 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
     logging.info('\nExport field landsat count stats by state')
 
     field_folder_id = f'projects/openet/assets/features/fields/temp'
-    # field_folder_id = f'projects/openet/assets/features/fields/2024-02-01'
 
     bucket_name = 'openet'
     bucket_folder = 'crop_type/pixelcount'

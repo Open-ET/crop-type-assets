@@ -12,13 +12,12 @@ import pandas as pd
 ogr.UseExceptions()
 
 
-def main(states, years=[], overwrite_flag=False):
+def main(states, overwrite_flag=False):
     """Fill missing crop type values
 
     Parameters
     ----------
     states : list
-    years : list, optional
     overwrite_flag : bool, optional
 
     """
@@ -31,7 +30,7 @@ def main(states, years=[], overwrite_flag=False):
 
     cdl_annual_remap_years = []
     # CGM - Add any later years that may need to be filled
-    cdl_annual_remap_years.append([2023])
+    cdl_annual_remap_years.append([2024])
     year_min = 1997
     for year in list(range(2007, year_min-1, -1)):
         cdl_annual_remap_years.append([year+1, year])
@@ -45,9 +44,7 @@ def main(states, years=[], overwrite_flag=False):
             'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY',
         ]
     else:
-        states = sorted(list(set(
-            y.strip() for x in states for y in x.split(',') if y.strip()
-        )))
+        states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -141,7 +138,6 @@ def main(states, years=[], overwrite_flag=False):
                     tgt_crop_type = crop_type
                     # print(f'Output crop:     {tgt_crop_type}')
 
-
                 output_ftr.SetField(f'CROP_{tgt_year}', tgt_crop_type)
                 output_ftr.SetField(f'CSRC_{tgt_year}', tgt_crop_src)
                 output_layer.SetFeature(output_ftr)
@@ -181,50 +177,14 @@ def main(states, years=[], overwrite_flag=False):
         # output_ds = None
 
 
-        # DEADBEEF - Old code for doing the copying/remapping
-        # # Copy remapped 2008 into all pre-2008 years
-        # src_year = '2008'
-        # tgt_years = list(map(str, range(year_min, 2008)))
-        # logging.info(f'Copying CROP_{src_year} to earlier years')
-        # logging.info('  Remapping most annual crops to code 47')
-        # output_ds = shp_driver.Open(shp_path, 1)
-        # output_layer = output_ds.GetLayer()
-        # for output_ftr in output_layer:
-        #     # Get the existing crop type/source values for the source year
-        #     crop_type = output_ftr.GetFieldAsInteger(f'CROP_{src_year}')
-        #     # crop_src = output_ftr.GetField(f'CSRC_{src_year}')
-        #     if crop_type == 0:
-        #         continue
-        #     # Convert annual crops to the generic annual crop code
-        #     try:
-        #         crop_type = cdl_annual_remap[crop_type]
-        #     except:
-        #         pass
-        #
-        #     for tgt_year in cdl_annual_remap_years:
-        #         tgt_crop_type = output_ftr.GetFieldAsInteger(f'CROP_{tgt_year}')
-        #         # tgt_crop_src = output_ftr.GetField(f'CSRC_{tgt_year}')
-        #         if tgt_crop_type > 0 and not overwrite_flag:
-        #             continue
-        #         output_ftr.SetField(f'CROP_{tgt_year}', crop_type)
-        #         output_ftr.SetField(
-        #             f'CSRC_{tgt_year}', f'Remapped from CROP_{src_year}')
-        #         # output_ftr.SetField(f'CSRC_{tgt_year}', crop_src)
-        #     output_layer.SetFeature(output_ftr)
-        # output_ds = None
-
-
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
         description='Fill missing crop type values',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--states', nargs='+', required=True,
+        '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
-    parser.add_argument(
-        '--years', default='', nargs='+',
-        help='Comma/space separated years and/or ranges of years')
     parser.add_argument(
         '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
@@ -240,4 +200,4 @@ if __name__ == '__main__':
     args = arg_parse()
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(states=args.states, years=args.years, overwrite_flag=args.overwrite)
+    main(states=args.states, overwrite_flag=args.overwrite)

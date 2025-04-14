@@ -14,8 +14,7 @@ import openet.core.utils as utils
 
 ogr.UseExceptions()
 
-PROJECT_NAME = 'openet'
-STORAGE_CLIENT = storage.Client(project=PROJECT_NAME)
+STORAGE_CLIENT = storage.Client(project='openet')
 
 # logging.getLogger('googleapiclient').setLevel(logging.INFO)
 # logging.getLogger('requests').setLevel(logging.INFO)
@@ -38,9 +37,6 @@ def main(states, overwrite_flag=False):
     logging.info('\nUpdating field landsat count stats by state')
 
     output_format = 'CSV'
-
-    # CGM - Using overwrite_flag to control this
-    # clear_existing_values = True
 
     # CSV stats bucket path
     bucket_name = 'openet'
@@ -77,8 +73,6 @@ def main(states, overwrite_flag=False):
         if x.name.replace(bucket_folder + '/', '')
     ])
     bucket_files = [f for f in bucket_files if 'utm' in f]
-    # pprint.pprint(bucket_files)
-    # input('ENTER')
 
 
     for state in states:
@@ -90,7 +84,6 @@ def main(states, overwrite_flag=False):
             logging.info('  State shapefile does not exist - skipping')
             continue
 
-        # if clear_existing_values:
         if overwrite_flag:
             logging.info('\nClearing all PIXELCOUNT values')
             shp_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -177,7 +170,7 @@ def arg_parse():
         description='Update field landsat count stats by state',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--states', nargs='+', required=True,
+        '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
     parser.add_argument(
         '--overwrite', default=False, action='store_true',

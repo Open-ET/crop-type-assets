@@ -15,17 +15,22 @@ logging.getLogger('googleapiclient').setLevel(logging.INFO)
 logging.getLogger('requests').setLevel(logging.INFO)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 
-PROJECT_NAME = 'openet'
-STORAGE_CLIENT = storage.Client(project=PROJECT_NAME)
+STORAGE_CLIENT = storage.Client(project='openet')
 
 
-def main(states, overwrite_flag=False):
+def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
     """Postprocess and upload the state field shapefiles
 
     Parameters
     ----------
     states : list
     overwrite_flag : bool, optional
+    gee_key_file : str, None, optional
+        Earth Engine service account JSON key file (the default is None).
+    project_id : str, optional
+        Google cloud project ID to use for GEE authentication.
+        This will be checked after the gee_key_file and before the user Initialize.
+        The default is None.
 
     """
     logging.info('\nZip the state field shapefiles')
@@ -36,12 +41,9 @@ def main(states, overwrite_flag=False):
 
     bucket_name = 'openet_field_boundaries'
     bucket_folder = ''
-    # bucket_folder = 'gs://openet_field_boundaries'
-
-    project_id = 'projects/openet/assets'
 
     # For now write the fields to a temp folder
-    collection_folder = f'{project_id}/features/fields/temp'
+    collection_folder = f'projects/openet/assets/features/fields/temp'
 
     if states == ['ALL']:
         # 'AL' is not included since there is not an Alabama field shapefile
@@ -58,14 +60,26 @@ def main(states, overwrite_flag=False):
     if not os.path.isdir(output_zip_ws):
         os.makedirs(output_zip_ws)
 
-    # CGM - Initialize is only needed if ingesting shapefiles
-    logging.info('\nInitializing Earth Engine')
-    # if gee_key_file:
-    #     logging.info(f'  Using service account key file: {gee_key_file}')
-    #     # The "EE_ACCOUNT" parameter is not used if the key file is valid
-    #     ee.Initialize(ee.ServiceAccountCredentials('', key_file=gee_key_file))
-    # else:
-    ee.Initialize()
+    # Initialize Earth Engine
+    if gee_key_file:
+        logging.info(f'\nInitializing GEE using user key file: {gee_key_file}')
+        try:
+            ee.Initialize(ee.ServiceAccountCredentials('_', key_file=gee_key_file))
+        except ee.ee_exception.EEException:
+            logging.warning('Unable to initialize GEE using user key file')
+            return False
+    elif project_id is not None:
+        logging.info(f'\nInitializing Earth Engine using project credentials'
+                     f'\n  Project ID: {project_id}')
+        try:
+            ee.Initialize(project=project_id)
+        except Exception as e:
+            logging.warning(f'\nUnable to initialize GEE using project ID\n  {e}')
+            return False
+    else:
+        logging.info('\nInitializing Earth Engine using default credentials')
+        ee.Initialize()
+
 
     logging.info('\nReading bucket files')
     bucket = STORAGE_CLIENT.bucket(bucket_name)
@@ -167,7 +181,7 @@ def arg_parse():
         description='Update field crop type values by feature',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--states', nargs='+', required=True,
+        '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
     parser.add_argument(
         '--overwrite', default=False, action='store_true',

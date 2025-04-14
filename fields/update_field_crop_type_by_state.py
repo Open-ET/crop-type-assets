@@ -34,14 +34,22 @@ def main(states, years=[], overwrite_flag=False):
     """
     logging.info('\nUpdating field crop type values by state')
 
-    output_format = 'CSV'
+    # Min/max year range to process
+    # Don't change min year unless additional CONUS CDL images are ingested
+    #   or additional crop type data is identified
+    year_min = 1997
+    year_max = 2024
 
-    # CGM - Using overwrite_flag to control this
-    # clear_existing_values = True
+    # Years where CDL has full CONUS coverage
+    # Don't change min year unless additional CONUS CDL images are ingested
+    cdl_year_min = 2008
+    cdl_year_max = 2024
 
     # CSV stats bucket path
     bucket_name = 'openet_geodatabase'
     bucket_folder = 'temp_croptype_20250411'
+
+    output_format = 'CSV'
 
     shell_flag = True
 
@@ -63,17 +71,6 @@ def main(states, years=[], overwrite_flag=False):
         states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
 
-    # This CDL start year is for the full CONUS images, but CDL does exist for
-    #   some states back to 1997 (see cdl_year_states dictionary below)
-    cdl_year_min = 2008
-    cdl_year_max = 2024
-
-    # Min/max year range to process
-    year_min = 1997
-    year_max = 2024
-    # year_min = 2008
-    # year_max = datetime.today().year
-
     if not years:
         years = list(range(year_min, year_max+1))
     else:
@@ -83,7 +80,6 @@ def main(states, years=[], overwrite_flag=False):
             if ((year <= year_max) and (year >= year_min))
         )))
     logging.info(f'Years:  {", ".join(map(str, years))}')
-
 
     # All states are available for 2008 through present
     # These lists may not be complete for the eastern states
@@ -132,7 +128,6 @@ def main(states, years=[], overwrite_flag=False):
             logging.info('  State shapefile does not exist - skipping')
             continue
 
-        # if clear_existing_values:
         if overwrite_flag:
             logging.info('\nClearing all crop type and source values')
             shp_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -222,9 +217,7 @@ def main(states, years=[], overwrite_flag=False):
 
         if not os.path.isfile(shp_path):
             logging.info('  State shapefile does not exist - skipping')
-        #     continue
 
-        # if clear_existing_values:
         if overwrite_flag:
             logging.info('\nClearing all crop type and source values')
             # print(years)
@@ -405,7 +398,7 @@ def arg_parse():
         description='Update field crop type values by state',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--states', nargs='+', required=True,
+        '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
     parser.add_argument(
         '--years', default='', nargs='+',

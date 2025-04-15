@@ -128,17 +128,16 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
             else:
                 logging.info('  Overwrite is False - skipping')
                 continue
-        # logging.info('  Uploading zip file')
-        # blob.upload_from_filename(zip_path)
-        if bucket_folder:
-            upload_path = f'gs://{bucket_name}/{bucket_folder}/'
-        else:
-            upload_path = f'gs://{bucket_name}/'
-        subprocess.call(
-            ['gsutil', 'cp', zip_path, upload_path],
-            # cwd=field_ws,
-            # shell=shell_flag,
-        )
+        blob.upload_from_filename(zip_path)
+        # if bucket_folder:
+        #     upload_path = f'gs://{bucket_name}/{bucket_folder}/'
+        # else:
+        #     upload_path = f'gs://{bucket_name}/'
+        # subprocess.call(
+        #     ['gsutil', 'cp', zip_path, upload_path],
+        #     # cwd=field_ws,
+        #     # shell=shell_flag,
+        # )
         sleep(5)
 
 

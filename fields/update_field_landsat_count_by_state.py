@@ -14,11 +14,11 @@ import openet.core.utils as utils
 
 ogr.UseExceptions()
 
-STORAGE_CLIENT = storage.Client(project='openet')
-
 # logging.getLogger('googleapiclient').setLevel(logging.INFO)
 # logging.getLogger('requests').setLevel(logging.INFO)
 # logging.getLogger('urllib3').setLevel(logging.INFO)
+
+STORAGE_CLIENT = storage.Client(project='openet')
 
 
 def main(states, overwrite_flag=False):
@@ -109,11 +109,13 @@ def main(states, overwrite_flag=False):
             # if overwrite_flag:
             if not os.path.isfile(stats_path) or overwrite_flag:
                 logging.debug(f'  Downloading stats {output_format} from bucket')
-                subprocess.call(
-                    ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{bucket_folder}/{stats_name}', stats_ws],
-                    # cwd=field_ws,
-                    # shell=shell_flag,
-                )
+                if bucket_folder:
+                    bucket_path = f'{bucket_folder}/{stats_name}'
+                else:
+                    bucket_path = f'{stats_name}'
+                src_bucket = STORAGE_CLIENT.bucket(bucket_name)
+                src_blob = src_bucket.get_blob(bucket_path)
+                src_blob.download_to_filename(stats_path)
 
             if not os.path.isfile(stats_path):
                 logging.info(f'  Stats {output_format} does not exist - skipping')

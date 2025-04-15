@@ -6,6 +6,7 @@ import pprint
 import re
 import subprocess
 
+from google.cloud import storage
 from osgeo import ogr
 import pandas as pd
 
@@ -16,6 +17,8 @@ ogr.UseExceptions()
 # logging.getLogger('googleapiclient').setLevel(logging.INFO)
 # logging.getLogger('requests').setLevel(logging.INFO)
 # logging.getLogger('urllib3').setLevel(logging.INFO)
+
+STORAGE_CLIENT = storage.Client(project='openet')
 
 
 def main(states, years=[], overwrite_flag=False):
@@ -47,7 +50,7 @@ def main(states, years=[], overwrite_flag=False):
 
     # CSV stats bucket path
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20250411'
+    bucket_folder = 'temp_croptype_20250414'
 
     output_format = 'CSV'
 
@@ -161,14 +164,14 @@ def main(states, years=[], overwrite_flag=False):
             # if overwrite_flag:
             if not os.path.isfile(stats_path) or overwrite_flag:
                 logging.debug(f'  Downloading stats {output_format} from bucket')
-
-                subprocess.call(
-                    # ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{stats_name}', stats_ws],
-                    ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{bucket_folder}/{stats_name}', stats_ws],
-                    # cwd=field_ws,
-                    shell=shell_flag,
-                    # check=True,
-                )
+                if bucket_folder:
+                    bucket_path = f'{bucket_folder}/{stats_name}'
+                else:
+                    bucket_path = f'{stats_name}'
+                logging.debug(f'  {bucket_path}')
+                src_bucket = STORAGE_CLIENT.bucket(bucket_name)
+                src_blob = src_bucket.get_blob(bucket_path)
+                src_blob.download_to_filename(stats_path)
 
             if not os.path.isfile(stats_path):
                 logging.info(f'  Stats {output_format} does not exist - skipping')
@@ -246,11 +249,14 @@ def main(states, years=[], overwrite_flag=False):
             # if not os.path.isfile(stats_path):
             if overwrite_flag or not os.path.isfile(stats_path):
                 logging.debug('  Downloading stats file from bucket')
-                subprocess.call(
-                    ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{bucket_folder}/{stats_name}', stats_ws],
-                    # cwd=field_ws,
-                    shell=shell_flag,
-                )
+                if bucket_folder:
+                    bucket_path = f'{bucket_folder}/{stats_name}'
+                else:
+                    bucket_path = f'{stats_name}'
+                logging.debug(f'  {bucket_path}')
+                src_bucket = STORAGE_CLIENT.bucket(bucket_name)
+                src_blob = src_bucket.get_blob(bucket_path)
+                src_blob.download_to_filename(stats_path)
             if not os.path.isfile(stats_path):
                 logging.info('  Stats file does not exist - skipping')
                 continue
@@ -311,12 +317,14 @@ def main(states, years=[], overwrite_flag=False):
             # if overwrite_flag or not os.path.isfile(stats_path):
             if not os.path.isfile(stats_path):
                 logging.info('  Downloading stats files from bucket')
-                subprocess.call(
-                    # ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{stats_name}', stats_ws],
-                    ['gsutil', '-q', 'cp', f'gs://{bucket_name}/{bucket_folder}/{stats_name}', stats_ws],
-                    # cwd=field_ws,
-                    shell=shell_flag,
-                )
+                if bucket_folder:
+                    bucket_path = f'{bucket_folder}/{stats_name}'
+                else:
+                    bucket_path = f'{stats_name}'
+                logging.debug(f'  {bucket_path}')
+                src_bucket = STORAGE_CLIENT.bucket(bucket_name)
+                src_blob = src_bucket.get_blob(bucket_path)
+                src_blob.download_to_filename(stats_path)
             if not os.path.isfile(stats_path):
                 logging.info('  Stats file does not exist - skipping')
                 continue

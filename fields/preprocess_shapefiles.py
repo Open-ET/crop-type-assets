@@ -24,8 +24,14 @@ logging.getLogger('urllib3').setLevel(logging.INFO)
 
 STORAGE_CLIENT = storage.Client(project='openet')
 
-
-def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=None):
+def main(
+        states,
+        years=[],
+        overwrite_flag=False,
+        gee_key_file=None,
+        project_id=None,
+        crop_type_flag=True,
+):
     """Download and preprocess the state field shapefiles
 
     Parameters
@@ -40,6 +46,8 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
         Google cloud project ID to use for GEE authentication.
         This will be checked after the gee_key_file and before the user Initialize.
         The default is None.
+    crop_type_flag : bool, optional
+        If True, the crop type and source fields will be added (the default is True).
 
     """
     logging.info('\nUpdating field crop type values')
@@ -52,7 +60,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
     shapefile_ws = os.path.join(field_ws, 'shapefiles')
 
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_shp_20250409'
+    bucket_folder = 'temp_shp_20250417'
 
     # For now write the fields to a temp folder
     collection_folder = f'projects/openet/assets/features/fields/temp'
@@ -101,6 +109,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
         'Shape_Leng', 'Shape_Area', 'PP_Score', 'PXL_COUNT', 'PP',
         'SHAPE_LENG', 'SHAPE_AREA', 'PP_SCORE', 'PIXELCOUNT',
         'STATE',
+        'ACRES',
     ]
 
     # mgrs_tile_field = 'MGRS_TILE'
@@ -112,8 +121,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
 
 
     # CGM - I think Matt used a 2000m2 area threshold, so start smaller than that initially
-    area_threshold = 1000
-    # area_threshold = 2000
+    area_threshold = 800
 
     # Initialize Earth Engine
     if gee_key_file:
@@ -460,90 +468,90 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
                 input_layer.SetFeature(input_ftr)
             input_ds = None
 
+        if crop_type_flag:
+            # Write the crop type and source fields
+            new_crop_type_fields = [f for f in crop_type_fields if f not in existing_fields]
+            new_crop_src_fields = [f for f in crop_src_fields if f not in existing_fields]
+            if not new_crop_type_fields and not new_crop_src_fields:
+                logging.info('  No new fields to add')
+                # logging.info('  No new fields to add - skipping')
+                # continue
 
-        # Write the crop type and source fields
-        new_crop_type_fields = [f for f in crop_type_fields if f not in existing_fields]
-        new_crop_src_fields = [f for f in crop_src_fields if f not in existing_fields]
-        if not new_crop_type_fields and not new_crop_src_fields:
-            logging.info('  No new fields to add')
-            # logging.info('  No new fields to add - skipping')
-            # continue
-
-        # Add new crop type fields and set value to 0
-        if new_crop_type_fields:
-            logging.info(f'  Adding crop type fields: {", ".join(new_crop_type_fields)}')
-            input_ds = shp_driver.Open(shp_path, 1)
-            input_layer = input_ds.GetLayer()
-            for crop_type_field in new_crop_type_fields:
-                field_defn = ogr.FieldDefn(crop_type_field, ogr.OFTInteger)
-                input_layer.CreateField(field_defn)
-                existing_fields.append(crop_type_field)
-            input_ds = None
-
-        # Add new crop source fields and set value to ''
-        if new_crop_src_fields:
-            logging.info(f'  Adding crop source fields: {", ".join(new_crop_src_fields)}')
-            input_ds = shp_driver.Open(shp_path, 1)
-            input_layer = input_ds.GetLayer()
-            for crop_src_field in new_crop_src_fields:
-                field_defn = ogr.FieldDefn(crop_src_field, ogr.OFTString)
-                field_defn.SetWidth(64)
-                input_layer.CreateField(field_defn)
-                existing_fields.append(crop_src_field)
-            input_ds = None
-
-        if new_crop_type_fields or new_crop_src_fields:
-            logging.info('  Setting new crop type/source default field values')
-            input_ds = shp_driver.Open(shp_path, 1)
-            input_layer = input_ds.GetLayer()
-            for input_ftr in input_layer:
+            # Add new crop type fields and set value to 0
+            if new_crop_type_fields:
+                logging.info(f'  Adding crop type fields: {", ".join(new_crop_type_fields)}')
+                input_ds = shp_driver.Open(shp_path, 1)
+                input_layer = input_ds.GetLayer()
                 for crop_type_field in new_crop_type_fields:
-                    input_ftr.SetField(crop_type_field, 0)
+                    field_defn = ogr.FieldDefn(crop_type_field, ogr.OFTInteger)
+                    input_layer.CreateField(field_defn)
+                    existing_fields.append(crop_type_field)
+                input_ds = None
+
+            # Add new crop source fields and set value to ''
+            if new_crop_src_fields:
+                logging.info(f'  Adding crop source fields: {", ".join(new_crop_src_fields)}')
+                input_ds = shp_driver.Open(shp_path, 1)
+                input_layer = input_ds.GetLayer()
                 for crop_src_field in new_crop_src_fields:
-                    input_ftr.SetField(crop_src_field, '')
-                input_layer.SetFeature(input_ftr)
-            input_ds = None
+                    field_defn = ogr.FieldDefn(crop_src_field, ogr.OFTString)
+                    field_defn.SetWidth(64)
+                    input_layer.CreateField(field_defn)
+                    existing_fields.append(crop_src_field)
+                input_ds = None
 
-        # # Get the field list again to check if the fields are sorted
-        # input_ds = shp_driver.Open(shp_path, 0)
-        # input_layer = input_ds.GetLayer()
-        # input_lyr_defn = input_layer.GetLayerDefn()
-        # existing_fields = [
-        #     input_lyr_defn.GetFieldDefn(i).GetNameRef()
-        #     for i in range(input_lyr_defn.GetFieldCount())]
-        # input_ds = None
+            if new_crop_type_fields or new_crop_src_fields:
+                logging.info('  Setting new crop type/source default field values')
+                input_ds = shp_driver.Open(shp_path, 1)
+                input_layer = input_ds.GetLayer()
+                for input_ftr in input_layer:
+                    for crop_type_field in new_crop_type_fields:
+                        input_ftr.SetField(crop_type_field, 0)
+                    for crop_src_field in new_crop_src_fields:
+                        input_ftr.SetField(crop_src_field, '')
+                    input_layer.SetFeature(input_ftr)
+                input_ds = None
+
+            # # Get the field list again to check if the fields are sorted
+            # input_ds = shp_driver.Open(shp_path, 0)
+            # input_layer = input_ds.GetLayer()
+            # input_lyr_defn = input_layer.GetLayerDefn()
+            # existing_fields = [
+            #     input_lyr_defn.GetFieldDefn(i).GetNameRef()
+            #     for i in range(input_lyr_defn.GetFieldCount())]
+            # input_ds = None
 
 
-        # Check if the crop type/source fields are in order
-        crop_fields = [f for f in existing_fields if re.match('(CROP|CSRC)_\d{4}', f)]
-        if crop_fields != sorted(crop_fields):
-            logging.info('  Crop type/source fields are out of order')
-            # input('  Press ENTER to sort the crop fields')
+            # Check if the crop type/source fields are in order
+            crop_fields = [f for f in existing_fields if re.match('(CROP|CSRC)_\d{4}', f)]
+            if crop_fields != sorted(crop_fields):
+                logging.info('  Crop type/source fields are out of order')
+                # input('  Press ENTER to sort the crop fields')
 
-            # Put the crop type/source fields in order
-            # This will move non crop fields up to the front but keep
-            #   them in their respective order
-            logging.info('  Reordering the crop type/source fields')
-            input_ds = shp_driver.Open(shp_path, 1)
-            input_layer = input_ds.GetLayer()
-            input_lyr_defn = input_layer.GetLayerDefn()
-            fields = [
-                input_lyr_defn.GetFieldDefn(i).GetNameRef()
-                for i in range(input_lyr_defn.GetFieldCount())
-            ]
-            crop_fields = sorted([
-                [field, i] for i, field in enumerate(fields)
-                if re.match('(CROP|CSRC)_\d{4}', field)
-            ])
-            crop_index = {field: i for field, i in crop_fields}
-            field_index = [
-                i for i, field in enumerate(fields)
-                if not re.match('(CROP|CSRC)_\d{4}', field)
-            ]
-            for field, i in crop_fields:
-                field_index.append(crop_index[field])
-            input_layer.ReorderFields(field_index)
-            input_ds = None
+                # Put the crop type/source fields in order
+                # This will move non crop fields up to the front but keep
+                #   them in their respective order
+                logging.info('  Reordering the crop type/source fields')
+                input_ds = shp_driver.Open(shp_path, 1)
+                input_layer = input_ds.GetLayer()
+                input_lyr_defn = input_layer.GetLayerDefn()
+                fields = [
+                    input_lyr_defn.GetFieldDefn(i).GetNameRef()
+                    for i in range(input_lyr_defn.GetFieldCount())
+                ]
+                crop_fields = sorted([
+                    [field, i] for i, field in enumerate(fields)
+                    if re.match('(CROP|CSRC)_\d{4}', field)
+                ])
+                crop_index = {field: i for field, i in crop_fields}
+                field_index = [
+                    i for i, field in enumerate(fields)
+                    if not re.match('(CROP|CSRC)_\d{4}', field)
+                ]
+                for field, i in crop_fields:
+                    field_index.append(crop_index[field])
+                input_layer.ReorderFields(field_index)
+                input_ds = None
 
 
         # Check for missing or duplicate OPENET_ID values
@@ -551,16 +559,43 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
         input_ds = shp_driver.Open(shp_path, 0)
         input_layer = input_ds.GetLayer()
         openet_id_set = set()
+        openet_id_duplicates = []
         for input_ftr in input_layer:
             fid = input_ftr.GetFID()
             openet_id = input_ftr.GetField('OPENET_ID')
             if openet_id is None:
-                print(f'No ID value for FID {fid}')
+                print(f'    No ID value for FID {fid}')
             elif openet_id in openet_id_set:
-                print(f'Duplicate ID {openet_id}')
+                print(f'    Duplicate ID {openet_id}')
+                openet_id_duplicates.append(openet_id)
             else:
                 openet_id_set.add(openet_id)
         input_ds = None
+        openet_id_numbers = [
+            int(item.split('_')[1])
+            for item in openet_id_set
+            if '{state}' not in item
+        ]
+        openet_id_max = max(openet_id_numbers)
+        if openet_id_duplicates:
+            print(f'  Max ID: {openet_id_max}')
+
+        # # Fix duplicate OPENET_ID values
+        # if openet_id_duplicates:
+        #     logging.info('  Updating duplicate OPENET_ID value')
+        #     input('ENTER')
+        #     input_ds = shp_driver.Open(shp_path, 1)
+        #     input_layer = input_ds.GetLayer()
+        #     for input_ftr in input_layer:
+        #         fid = input_ftr.GetFID()
+        #         openet_id = input_ftr.GetField('OPENET_ID')
+        #         if openet_id in openet_id_duplicates:
+        #             openet_id_max += 1
+        #             print(f'      {openet_id} -> {state}_{openet_id_max}')
+        #             input_ftr.SetField('OPENET_ID', f'{state}_{openet_id_max}')
+        #             input_layer.SetFeature(input_ftr)
+        #     input_ds = None
+
 
 
 def arg_parse():
@@ -584,6 +619,9 @@ def arg_parse():
         '--project', default=None,
         help='Google cloud project ID to use for GEE authentication')
     parser.add_argument(
+        '--no_crop', default=False, action='store_true',
+        help='Don\'t add crop type or source fields')
+    parser.add_argument(
         '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
@@ -601,4 +639,5 @@ if __name__ == '__main__':
         overwrite_flag=args.overwrite,
         gee_key_file=args.key,
         project_id=args.project,
+        crop_type_flag=not(args.no_crop),
     )

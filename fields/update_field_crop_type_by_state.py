@@ -4,7 +4,6 @@ import logging
 import os
 import pprint
 import re
-import subprocess
 
 from google.cloud import storage
 from osgeo import ogr
@@ -50,7 +49,7 @@ def main(states, years=[], overwrite_flag=False):
 
     # CSV stats bucket path
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20250414'
+    bucket_folder = 'temp_croptype_20250417'
 
     output_format = 'CSV'
 
@@ -316,7 +315,7 @@ def main(states, years=[], overwrite_flag=False):
             # Only download stats files on overwrite or if not present
             # if overwrite_flag or not os.path.isfile(stats_path):
             if not os.path.isfile(stats_path):
-                logging.info('  Downloading stats files from bucket')
+                logging.debug('  Downloading stats files from bucket')
                 if bucket_folder:
                     bucket_path = f'{bucket_folder}/{stats_name}'
                 else:

@@ -1,8 +1,7 @@
 import argparse
 import logging
 import os
-# import pprint
-# import re
+import pprint
 
 from osgeo import ogr
 import pandas as pd
@@ -30,7 +29,7 @@ def main(states, overwrite_flag=False):
 
     cdl_annual_remap_years = []
     # CGM - Add any later years that may need to be filled
-    cdl_annual_remap_years.append([2024])
+    # cdl_annual_remap_years.append([2024])
     year_min = 1997
     for year in list(range(2007, year_min-1, -1)):
         cdl_annual_remap_years.append([year+1, year])

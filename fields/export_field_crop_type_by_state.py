@@ -58,7 +58,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
     field_folder_id = f'projects/openet/assets/features/fields/temp'
 
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20250414'
+    bucket_folder = 'temp_croptype_20250417'
 
     output_format = 'CSV'
 

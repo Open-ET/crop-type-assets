@@ -3,12 +3,17 @@ import argparse
 import logging
 import os
 import pprint
-import subprocess
+import re
 from time import sleep
 import zipfile
 
 import ee
 from google.cloud import storage
+from osgeo import ogr, osr
+
+import openet.core.utils as utils
+
+ogr.UseExceptions()
 
 logging.getLogger('earthengine-api').setLevel(logging.INFO)
 logging.getLogger('googleapiclient').setLevel(logging.INFO)
@@ -25,6 +30,7 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
     ----------
     states : list
     overwrite_flag : bool, optional
+        If True, overwrite existing files (the default is False).
     gee_key_file : str, None, optional
         Earth Engine service account JSON key file (the default is None).
     project_id : str, optional
@@ -39,8 +45,12 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
     shapefile_ws = os.path.join(field_ws, 'shapefiles')
     output_zip_ws = os.path.join(field_ws, 'updated_zips')
 
-    bucket_name = 'openet_field_boundaries'
-    bucket_folder = ''
+    # Temporary bucket
+    bucket_name = 'openet_geodatabase'
+    bucket_folder = 'temp_shp_20250417'
+
+    # bucket_name = 'openet_field_boundaries'
+    # bucket_folder = ''
 
     # For now write the fields to a temp folder
     collection_folder = f'projects/openet/assets/features/fields/temp'
@@ -80,14 +90,48 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
         logging.info('\nInitializing Earth Engine using default credentials')
         ee.Initialize()
 
-
     logging.info('\nReading bucket files')
     bucket = STORAGE_CLIENT.bucket(bucket_name)
     bucket_files = sorted([x.name for x in bucket.list_blobs()])
 
+    shp_driver = ogr.GetDriverByName('ESRI Shapefile')
 
     for state in states:
         logging.info(f'{state}')
+
+        state_ws = os.path.join(shapefile_ws, state)
+        shp_path = os.path.join(state_ws, f'{state}.shp')
+        logging.info(f'  {shp_path}')
+
+        # Remove extra sidecar files
+        for ext in ['cpg', 'qpj', 'sbx', 'sbn', 'shp.xml']:
+            if os.path.isfile(os.path.join(state_ws, f'{state}.{ext}')):
+                os.remove(os.path.join(state_ws, f'{state}.{ext}'))
+            if os.path.isfile(os.path.join(shapefile_ws, f'{state}.{ext}')):
+                os.remove(os.path.join(shapefile_ws, f'{state}.{ext}'))
+
+        # remove_crop_type_fields = False
+        # if remove_crop_type_fields:
+        #     logging.info('  Removing existing crop type/source fields')
+        #     input_ds = shp_driver.Open(shp_path, 1)
+        #     input_layer = input_ds.GetLayer()
+        #     input_lyr_defn = input_layer.GetLayerDefn()
+        #     input_fields = [
+        #         [i, input_lyr_defn.GetFieldDefn(i).GetNameRef()]
+        #         for i in range(input_lyr_defn.GetFieldCount())
+        #     ]
+        #     # Delete the fields in reverse order
+        #     for field_i, field_name in input_fields[::-1]:
+        #         if re.match('(CROP|CSRC)_\d{4}', field_name):
+        #             logging.debug(f'  {field_name}')
+        #             input_layer.DeleteField(field_i)
+        #         elif re.match('CDL_\d{4}', field_name):
+        #             logging.debug(f'  {field_name}')
+        #             input_layer.DeleteField(field_i)
+        #         # elif field_name in delete_fields:
+        #         #     logging.debug(f'  {field_name}')
+        #         #     input_layer.DeleteField(field_i)
+        #     input_ds = None
 
         # TODO: logging.info('Removing unused fields')
 
@@ -129,15 +173,6 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
                 logging.info('  Overwrite is False - skipping')
                 continue
         blob.upload_from_filename(zip_path)
-        # if bucket_folder:
-        #     upload_path = f'gs://{bucket_name}/{bucket_folder}/'
-        # else:
-        #     upload_path = f'gs://{bucket_name}/'
-        # subprocess.call(
-        #     ['gsutil', 'cp', zip_path, upload_path],
-        #     # cwd=field_ws,
-        #     # shell=shell_flag,
-        # )
         sleep(5)
 
 
@@ -186,6 +221,12 @@ def arg_parse():
         '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
     parser.add_argument(
+        '--key', type=utils.arg_valid_file, metavar='FILE',
+        help='GEE service account key file')
+    parser.add_argument(
+        '--project', default=None,
+        help='Google cloud project ID to use for GEE authentication')
+    parser.add_argument(
         '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
@@ -197,4 +238,9 @@ if __name__ == '__main__':
     args = arg_parse()
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(states=args.states, overwrite_flag=args.overwrite)
+    main(
+        states=args.states,
+        overwrite_flag=args.overwrite,
+        gee_key_file=args.key,
+        project_id=args.project,
+    )

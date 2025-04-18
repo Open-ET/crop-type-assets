@@ -31,7 +31,9 @@ def main(
         utm_zones=None,
         overwrite_flag=False,
         delay=0,
-        gee_key_file=None
+        gee_key_file=None,
+        project_id=None,
+        reverse_flag=False,
 ):
     """Build and ingest crop type MGRS tiles from a feature collection
 
@@ -46,6 +48,11 @@ def main(
         Delay time between each export task (the default is 0).
     gee_key_file : str, None, optional
         Earth Engine service account JSON key file (the default is None).
+    project_id : str, optional
+        Google cloud project ID to use for GEE authentication.
+        This will be checked after the gee_key_file and before the user Initialize.
+        The default is None.
+    reverse_flag : bool, optional
 
     Returns
     -------
@@ -54,24 +61,21 @@ def main(
     """
     logging.info('\nBuild crop type MGRS tiles from the crop feature collections')
 
-    # Hardcoded parameters
-    project_id = 'projects/openet/assets'
-
-    export_coll_id = f'{project_id}/crop_type/v2024a'
+    export_coll_id = f'projects/openet/assets/crop_type/v2024a'
     # export_band_name = 'crop_type'
 
-    crop_type_folder_id = f'{project_id}/features/fields/temp'
+    crop_type_folder_id = f'projects/openet/assets/features/fields/temp'
 
     # Using ERA5-Land MGRS tiles to avoid clipping outside CONUS
-    mgrs_ftr_coll_id = f'{project_id}/mgrs/global/era5land/zones'
-    mgrs_mask_coll_id = f'{project_id}/mgrs/global/era5land/zone_mask'
-    # mgrs_ftr_coll_id = f'{project_id}/mgrs/conus/gridmet/zones'
-    # mgrs_mask_coll_id = f'{project_id}/mgrs/conus/gridmet/zone_mask'
+    mgrs_ftr_coll_id = f'projects/openet/assets/mgrs/global/era5land/zones'
+    mgrs_mask_coll_id = f'projects/openet/assets/mgrs/global/era5land/zone_mask'
+    # mgrs_ftr_coll_id = f'projects/openet/assets/mgrs/conus/gridmet/zones'
+    # mgrs_mask_coll_id = f'projects/openet/assets/mgrs/conus/gridmet/zone_mask'
 
     cdl_coll_id = 'USDA/NASS/CDL'
 
-    # California specific crop type images built from Califoria crop mapping data
-    ca_coll_id = f'{project_id}/crop_type/california'
+    # California specific crop type images built from California crop mapping data
+    ca_coll_id = f'projects/openet/assets/crop_type/california'
 
     # The states collection is being used to select the field collections (by name)
     states_coll_id = 'TIGER/2018/States'
@@ -97,14 +101,14 @@ def main(
 
     # Parse user inputs
     if not years:
-        years = list(range(year_min, year_max+1))
+        years = sorted(list(range(year_min, year_max+1)), reverse=reverse_flag)
     else:
         years = set(
             int(year) for year_str in years
             for year in utils.str_ranges_2_list(year_str)
             if ((year <= year_max) and (year >= year_min))
         )
-        years = sorted(list(years))
+        years = sorted(list(years), reverse=reverse_flag)
     logging.info(f'Years: {", ".join(map(str, years))}')
 
     if mgrs_tiles:
@@ -164,12 +168,24 @@ def main(
     nalcms_cdl_remap = list(zip(*nalcms_cdl_remap))
 
 
-    logging.info('\nInitializing Earth Engine')
+    # Initialize Earth Engine
     if gee_key_file:
-        logging.info(f'  Using service account key file: {gee_key_file}')
-        # The "EE_ACCOUNT" parameter is not used if the key file is valid
-        ee.Initialize(ee.ServiceAccountCredentials('', key_file=gee_key_file))
+        logging.info(f'\nInitializing GEE using user key file: {gee_key_file}')
+        try:
+            ee.Initialize(ee.ServiceAccountCredentials('_', key_file=gee_key_file))
+        except ee.ee_exception.EEException:
+            logging.warning('Unable to initialize GEE using user key file')
+            return False
+    elif project_id is not None:
+        logging.info(f'\nInitializing Earth Engine using project credentials'
+                     f'\n  Project ID: {project_id}')
+        try:
+            ee.Initialize(project=project_id)
+        except Exception as e:
+            logging.warning(f'\nUnable to initialize GEE using project ID\n  {e}')
+            return False
     else:
+        logging.info('\nInitializing Earth Engine using default credentials')
         ee.Initialize()
 
 
@@ -227,7 +243,7 @@ def main(
     logging.info(f'\nStates with field feature collections:\n  {", ".join(crop_type_states)}')
 
 
-    # Get the last available CDL year
+    # Get the last available full CONUS CDL year
     cdl_year_min = 2008
     cdl_year_max = int(utils.get_info(
         ee.ImageCollection(cdl_coll_id)
@@ -480,6 +496,7 @@ def main(
             logging.debug('')
 
 
+# TODO: Switch to function in openet.core.export
 def mgrs_export_tiles(
         study_area_coll_id,
         mgrs_coll_id,
@@ -490,8 +507,8 @@ def mgrs_export_tiles(
         utm_zones=[],
         mgrs_property='mgrs',
         utm_property='utm',
-        cell_size=30
-        ):
+        cell_size=30,
+):
     """Select MGRS tiles and metadata that intersect the study area geometry
 
     Parameters
@@ -621,11 +638,17 @@ def arg_parse():
         '--years', default='', nargs='+',
         help='Comma separated list and/or range of years')
     parser.add_argument(
+        '--reverse', default=False, action='store_true',
+        help='Process years in reverse order')
+    parser.add_argument(
         '--delay', default=0, type=float,
         help='Delay (in seconds) between each export tasks')
     parser.add_argument(
         '--key', type=utils.arg_valid_file, metavar='FILE',
         help='JSON key file')
+    parser.add_argument(
+        '--project', default=None,
+        help='Google cloud project ID to use for GEE authentication')
     parser.add_argument(
         '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
@@ -649,4 +672,6 @@ if __name__ == '__main__':
         overwrite_flag=args.overwrite,
         delay=args.delay,
         gee_key_file=args.key,
+        project_id=args.project,
+        reverse_flag=args.reverse,
     )

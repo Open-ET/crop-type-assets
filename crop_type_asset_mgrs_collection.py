@@ -22,7 +22,7 @@ logging.getLogger('urllib3').setLevel(logging.INFO)
 
 TOOL_NAME = 'crop_type_asset_mgrs_collection'
 # TOOL_NAME = os.path.basename(__file__)
-TOOL_VERSION = '0.3.1'
+TOOL_VERSION = '0.3.2'
 
 
 def main(
@@ -61,16 +61,15 @@ def main(
     """
     logging.info('\nBuild crop type MGRS tiles from the crop feature collections')
 
-    export_coll_id = f'projects/openet/assets/crop_type/v2024a'
+    export_coll_id = f'projects/openet/assets/crop_type/v2024b'
     # export_band_name = 'crop_type'
 
-    crop_type_folder_id = f'projects/openet/assets/features/fields/temp'
+    crop_type_folder_id = f'projects/openet/assets/features/fields/v2024b'
+    #crop_type_folder_id = f'projects/openet/assets/features/fields/temp'
 
     # Using ERA5-Land MGRS tiles to avoid clipping outside CONUS
     mgrs_ftr_coll_id = f'projects/openet/assets/mgrs/global/era5land/zones'
     mgrs_mask_coll_id = f'projects/openet/assets/mgrs/global/era5land/zone_mask'
-    # mgrs_ftr_coll_id = f'projects/openet/assets/mgrs/conus/gridmet/zones'
-    # mgrs_mask_coll_id = f'projects/openet/assets/mgrs/conus/gridmet/zone_mask'
 
     cdl_coll_id = 'USDA/NASS/CDL'
 
@@ -87,11 +86,6 @@ def main(
         '16R', '16S', '16T', '16U', '17R', '17S', '17T', '17U', '18S', '18T', '18U',
         '19T', '19U'
     ]
-    # supported_mgrs_tiles = [
-    #     '10S', '10T', '10U', '11S', '11T', '11U', '12R', '12S', '12T', '12U',
-    #     '13R', '13S', '13T', '13U', '14R', '14S', '14T', '14U', '15R', '15S', '15T', '15U',
-    #     '16R', '16S', '16T', '16U', '17R', '17S', '17T', '17U', '18S', '18T', '19T',
-    # ]
     mgrs_skip_list = []
 
     annual_remap_path = os.path.join(os.getcwd(), 'cdl_annual_crop_remap_table.csv')
@@ -333,14 +327,20 @@ def main(
 
             properties = {
                 'system:time_start': ee.Date.fromYMD(year, 1, 1).millis(),
+                'build_date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+                'build_status': 'permanent',
                 'core_version': openet.core.__version__,
                 'crop_type_folder': crop_type_folder_id,
                 'crop_type_states': ','.join(mgrs_states),
-                'date_ingested': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
                 'mgrs_tile': mgrs_tile,
                 'tool_name': TOOL_NAME,
                 'tool_version': TOOL_VERSION,
             }
+
+            if mgrs_tile in ['10S', '10T', '11S'] and year > 2023:
+                properties['build_status'] = 'provisional'
+            elif year > cdl_year_max:
+                properties['build_status'] = 'provisional'
 
             # # DEADBEEF
             # print(

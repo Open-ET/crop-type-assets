@@ -4,7 +4,6 @@ import logging
 import os
 import pprint
 import re
-import subprocess
 
 from google.cloud import storage
 from osgeo import ogr

@@ -41,8 +41,8 @@ def main(states=[]):
 
 
     if 'CA' in states:
-        logging.info('\nSet the crop type for all orchards in Fresno, Kern, '
-                     'Riverside, San Bernadino, and Tulare counties in California '
+        logging.info('\nSet the crop type for all "grapes" (CDL 69) in Fresno, Kern, '
+                     'Riverside, San Bernadino, and Tulare counties (in California) '
                      'to the custom "table grape" value of 78')
         state = 'CA'
         shp_path = os.path.join(shapefile_ws, state, f'{state}.shp')
@@ -53,11 +53,8 @@ def main(states=[]):
         # output_layer.SetAttributeFilter("HUC12 LIKE '1301%'")
         for output_ftr in output_layer:
             county = str(output_ftr.GetField(f'FIPS'))
-            if county.lower() not in ['06019', '06029', '06065', '06071', '06107']:
+            if county not in ['06019', '06029', '06065', '06071', '06107']:
                 continue
-            # huc = str(output_ftr.GetField(f'HUC12'))
-            # if not huc.startswith('130100') and not huc.startswith('130201'):
-            #     continue
 
             # TODO: How do we easily cycle through all the CROP_YYYY fields?
             for tgt_year in range(2008, 2025):

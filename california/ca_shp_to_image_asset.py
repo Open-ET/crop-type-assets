@@ -42,7 +42,7 @@ def main(YEARS, overwrite_flag=False):
     map_ws = os.path.join(workspace, 'remaps')
 
     if not YEARS:
-        YEARS = [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]
+        YEARS = [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
 
     # Hardcoding the shapefile folders and names for now since they are all slightly different
     src_paths = {
@@ -54,8 +54,8 @@ def main(YEARS, overwrite_flag=False):
         2021: os.path.join(src_ws, 'i15_Crop_Mapping_2021_SHP', 'i15_Crop_Mapping_2021.shp'),
         2022: os.path.join(src_ws, 'i15_Crop_Mapping_2022_SHP', 'i15_Crop_Mapping_2022.shp'),
         2023: os.path.join(src_ws, 'i15_Crop_Mapping_2023_Provisional_SHP', 'i15_Crop_Mapping_2023_Provisional.shp'),
+        2024: os.path.join(src_ws, 'i15_Crop_Mapping_2024_Provisional_SHP', 'i15_Crop_Mapping_2024_Provisional.shp'),
     }
-
 
     project_id = 'projects/openet/assets'
 
@@ -76,10 +76,14 @@ def main(YEARS, overwrite_flag=False):
             raise ValueError(f'unsupported year {year}')
         logging.info(f'\n{year}')
 
-        # Building projections from EPSG codes by year instead of reading from
-        #   the shapefiles later on
+        if year >= 2023:
+            build_status = 'provisional'
+        else:
+            build_status = 'permanent'
+
+        # Setting projections from EPSG codes by year instead of reading from the shapefiles
         input_srs = osr.SpatialReference()
-        if year in [2019, 2020, 2021, 2023]:
+        if year in [2019, 2020, 2021, 2023, 2024]:
             input_srs.ImportFromEPSG(4269)
         elif year in [2022]:
             input_srs.ImportFromEPSG(3310)
@@ -117,11 +121,7 @@ def main(YEARS, overwrite_flag=False):
             remap_df = pd.read_csv(
                 os.path.join(map_ws, f'ca2016_2023_cdl_remap_table.csv'), comment='#'
             )
-        # remap_df = pd.read_csv(
-        #     os.path.join(map_ws, f'ca{year}_cdl_remap_table.csv'), comment='#'
-        # )
         ca_cdl_remap = dict(zip(remap_df.IN, remap_df.OUT))
-
 
         src_path = src_paths[year]
         shp_path = os.path.join(shp_ws, f'ca{year}_cdl.shp')
@@ -151,7 +151,7 @@ def main(YEARS, overwrite_flag=False):
             for src_ftr in src_layer:
                 src_fid = src_ftr.GetFID()
                 geometry = src_ftr.GetGeometryRef().Clone()
-                if year in [2019, 2020, 2021, 2022, 2023]:
+                if year in [2019, 2020, 2021, 2022, 2023, 2024]:
                     crop_type = src_ftr.GetField(f'CROPTYP2')
                     main_crop = src_ftr.GetField(f'MAIN_CROP')
                 elif year in [2016, 2018]:
@@ -303,6 +303,8 @@ def main(YEARS, overwrite_flag=False):
             'pyramidingPolicy': 'MODE',
             'properties': {
                 'date_updated': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+                'build_date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+                'build_status': build_status,
             },
         }
         try:
@@ -413,6 +415,8 @@ def main(YEARS, overwrite_flag=False):
                 'pyramidingPolicy': 'MODE',
                 'properties': {
                     'date_updated': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+                    'build_date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+                    'build_status': build_status,
                 },
             }
             try:

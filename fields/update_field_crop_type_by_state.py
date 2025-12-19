@@ -329,7 +329,7 @@ def main(states, years=[], overwrite_flag=False):
                 continue
 
             logging.debug(f'  Reading stats {output_format}')
-            # Restucture the feature information for writing to the shapefile
+            # Restructure the feature information for writing to the shapefile
             if output_format.upper() == 'CSV':
                 update_df = (
                     pd.read_csv(stats_path)

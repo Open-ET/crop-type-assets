@@ -22,7 +22,7 @@ logging.getLogger('urllib3').setLevel(logging.INFO)
 
 TOOL_NAME = 'crop_type_asset_mgrs_collection'
 # TOOL_NAME = os.path.basename(__file__)
-TOOL_VERSION = '0.3.1'
+TOOL_VERSION = '0.4.0'
 
 
 def main(
@@ -61,16 +61,15 @@ def main(
     """
     logging.info('\nBuild crop type MGRS tiles from the crop feature collections')
 
-    export_coll_id = f'projects/openet/assets/crop_type/v2024a'
+    export_coll_id = f'projects/openet/assets/crop_type/v2024b'
     # export_band_name = 'crop_type'
 
-    crop_type_folder_id = f'projects/openet/assets/features/fields/temp'
+    crop_type_folder_id = f'projects/openet/assets/features/fields/v2024a'
+    #crop_type_folder_id = f'projects/openet/assets/features/fields/temp'
 
     # Using ERA5-Land MGRS tiles to avoid clipping outside CONUS
     mgrs_ftr_coll_id = f'projects/openet/assets/mgrs/global/era5land/zones'
     mgrs_mask_coll_id = f'projects/openet/assets/mgrs/global/era5land/zone_mask'
-    # mgrs_ftr_coll_id = f'projects/openet/assets/mgrs/conus/gridmet/zones'
-    # mgrs_mask_coll_id = f'projects/openet/assets/mgrs/conus/gridmet/zone_mask'
 
     cdl_coll_id = 'USDA/NASS/CDL'
 
@@ -87,17 +86,15 @@ def main(
         '16R', '16S', '16T', '16U', '17R', '17S', '17T', '17U', '18S', '18T', '18U',
         '19T', '19U'
     ]
-    # supported_mgrs_tiles = [
-    #     '10S', '10T', '10U', '11S', '11T', '11U', '12R', '12S', '12T', '12U',
-    #     '13R', '13S', '13T', '13U', '14R', '14S', '14T', '14U', '15R', '15S', '15T', '15U',
-    #     '16R', '16S', '16T', '16U', '17R', '17S', '17T', '17U', '18S', '18T', '19T',
-    # ]
     mgrs_skip_list = []
 
     annual_remap_path = os.path.join(os.getcwd(), 'cdl_annual_crop_remap_table.csv')
 
     year_min = 1985
     year_max = 2024
+
+    ca_year_max = 2024
+    ca_year_prov = [2024]
 
     # Parse user inputs
     if not years:
@@ -333,14 +330,20 @@ def main(
 
             properties = {
                 'system:time_start': ee.Date.fromYMD(year, 1, 1).millis(),
+                'build_date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+                'build_status': 'permanent',
                 'core_version': openet.core.__version__,
                 'crop_type_folder': crop_type_folder_id,
                 'crop_type_states': ','.join(mgrs_states),
-                'date_ingested': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
                 'mgrs_tile': mgrs_tile,
                 'tool_name': TOOL_NAME,
                 'tool_version': TOOL_VERSION,
             }
+
+            if (mgrs_tile in ['10S', '10T', '11S']) and (year in ca_year_prov):
+                properties['build_status'] = 'provisional'
+            elif year > cdl_year_max:
+                properties['build_status'] = 'provisional'
 
             # # DEADBEEF
             # print(
@@ -370,13 +373,14 @@ def main(
 
             # Mosaic the California Crop Mapping image for the UTM zone before any CDL images
             if mgrs_tile in ['10S', '10T', '11S']:
-                if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
+                if year in [2014, 2016] + list(range(2018, ca_year_max+1)):
+                    # Year specific images are available for 2014, 2016, & 2018+
                     # Using the UTM zone projected version of the California image
                     ca_img_id = f'{ca_coll_id}/{year}_utm{mgrs_tile[:2]}'
                     # ca_img_id = f'{ca_coll_id}/{year}'
                     ca_img = ee.Image(ca_img_id)
-                elif year > 2023:
-                    ca_img_id = f'{ca_coll_id}/2023_utm{mgrs_tile[:2]}'
+                elif year > ca_year_max:
+                    ca_img_id = f'{ca_coll_id}/{ca_year_max}_utm{mgrs_tile[:2]}'
                     # ca_img_id = f'{ca_coll_id}/2021'
                     ca_img = ee.Image(ca_img_id).remap(cdl_remap_in, cdl_remap_out)
                 elif year in [2015, 2017]:
@@ -475,6 +479,17 @@ def main(
                 .set(properties)
             )
 
+            # TODO: Test if this can be applied earlier in the flow
+            # Adjust non-wine grape pixels from CDL 69 to CDL 78
+            # if the wine grape flag is 0 and the dominant ratio is greater than 0.65
+            if mgrs_tile in ['10S', '10T', '11S']:
+                flag_raster = ee.Image("projects/openet/assets/crop_type/california/grapes/winegrape_flag")
+                ratio_raster = ee.Image("projects/openet/assets/crop_type/california/grapes/grape_totalgrapes")
+                output_img = output_img.where(
+                    output_img.eq(69).And(ratio_raster.gt(0.65)).And(flag_raster.eq(0)),
+                    78
+                )
+
             # Build export tasks
             task = ee.batch.Export.image.toAsset(
                 output_img,
@@ -485,6 +500,7 @@ def main(
                 crsTransform=export_info['geo_str'],
                 maxPixels=export_info['maxpixels']*2,
                 pyramidingPolicy={'cropland': 'mode'},
+                # overwrite=overwrite_flag,
             )
 
             logging.info('  Starting export task')

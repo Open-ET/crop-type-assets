@@ -14,11 +14,11 @@ For each year, the following images are stacked and reduced using a firstNonNull
     - Years after the last CDL year, use the remapped last CDL image
 - California MGRS tiles 10S, 10T, 11S
   - California DWR Crop Mapping data for California MGRS tiles 10S, 10T, 11S
-      - 2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023: use the CA Crop Mapping image directly
+      - 2014, 2016, 2018-2024 : use the CA Crop Mapping image directly
       - 2009-2013: use the remapped 2014.  
         - Note, the urban and managed wetland pixels are masked after remapping for these 5 years (check if this masking is needed for other years).
       - 2015 and 2017: use the remapped previous year (2014 and 2016)
-      - 2024+: use the remapped 2023 year
+      - 2025+: use the remapped 2024 year
   - Cropland Data Layer (CDL)
     - Almost the same as the approach for the non-California tiles above, except that we always use the annual crop remapped version of the CDL to fill any holes that might be in the CA Crop Mapping images
 
@@ -41,7 +41,7 @@ The crop_type images are being written to image collections in the "projects/ope
 The most recent complete version of the crop type image assets is in the collection:
 
 ```
-projects/openet/assets/crop_type/v2023a
+projects/openet/assets/crop_type/v2024b
 ```
 
 ## Running the Tools

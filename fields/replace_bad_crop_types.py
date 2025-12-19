@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import pprint
+import re
 
 from osgeo import ogr
 import pandas as pd
@@ -25,7 +26,7 @@ def main(states=[]):
     remap_path = os.path.join(os.path.dirname(field_ws), 'cdl_annual_crop_remap_table.csv')
 
     if states == ['ALL']:
-        states = ['CA', 'CO', 'NM', 'MX']
+        states = ['CO', 'NM', 'MX']
     else:
         states = sorted(list(set(y.strip() for x in states for y in x.split(',') if y.strip())))
     logging.info(f'States: {", ".join(states)}')
@@ -38,32 +39,6 @@ def main(states=[]):
     cdl_annual_remap = dict(zip(remap_df.IN, remap_df.OUT))
     # pprint.pprint(cdl_annual_remap)
     # input('ENTER')
-
-
-    if 'CA' in states:
-        logging.info('\nSet the crop type for all "grapes" (CDL 69) in Fresno, Kern, '
-                     'Riverside, San Bernadino, and Tulare counties (in California) '
-                     'to the custom "table grape" value of 78')
-        state = 'CA'
-        shp_path = os.path.join(shapefile_ws, state, f'{state}.shp')
-        logging.info(f'  {shp_path}')
-        output_ds = shp_driver.Open(shp_path, 1)
-        output_layer = output_ds.GetLayer()
-        # TODO: Test out filtering the layer instead of checking each feature HUC in the loop
-        # output_layer.SetAttributeFilter("HUC12 LIKE '1301%'")
-        for output_ftr in output_layer:
-            county = str(output_ftr.GetField(f'FIPS'))
-            if county not in ['06019', '06029', '06065', '06071', '06107']:
-                continue
-
-            # TODO: How do we easily cycle through all the CROP_YYYY fields?
-            for tgt_year in range(2008, 2025):
-                crop_type = output_ftr.GetFieldAsInteger(f'CROP_{tgt_year}')
-                if crop_type == 69:
-                    output_ftr.SetField(f'CROP_{tgt_year}', 78)
-                output_layer.SetFeature(output_ftr)
-        output_ds = None
-
 
     if 'NM' in states:
         logging.info('\nReplace all 2008-2010 values in New Mexico HUC14 fields with the 2011 value')
@@ -99,7 +74,6 @@ def main(states=[]):
                     output_ftr.SetField(f'CSRC_{tgt_year}', f'CROP_{src_year}')
             output_layer.SetFeature(output_ftr)
         output_ds = None
-
 
     if 'CO' in states:
         logging.info('\nReplace all 2009 values in Colorado San Luis Valley HUCs '
@@ -145,7 +119,6 @@ def main(states=[]):
             output_layer.SetFeature(output_ftr)
         output_ds = None
 
-
     if 'MX' in states:
         logging.info('\nSet all Mexico field values to 47')
         state = 'MX'
@@ -159,6 +132,41 @@ def main(states=[]):
                 output_ftr.SetField(f'CSRC_{tgt_year}', 'DEFAULT')
             output_layer.SetFeature(output_ftr)
         output_ds = None
+
+    # DEADBEEF - Table grape classes are being adjusted in the rasters
+    # if 'CA' in states:
+    #     logging.info('\nSet the crop type for all "grapes" (CDL 69) in Fresno, Kern, '
+    #                  'Riverside, San Bernadino, and Tulare counties (in California) '
+    #                  'to the custom "table grape" value of 78')
+    #     state = 'CA'
+    #     shp_path = os.path.join(shapefile_ws, state, f'{state}.shp')
+    #     logging.info(f'  {shp_path}')
+    #     output_ds = shp_driver.Open(shp_path, 1)
+    #     output_layer = output_ds.GetLayer()
+    #
+    #     # Get the list of all "CROP_YYYY" fields in the shapefile
+    #     crop_year_fields = []
+    #     output_layer_defn = output_layer.GetLayerDefn()
+    #     for i in range(output_layer_defn.GetFieldCount()):
+    #         #field = output_layer_defn.GetFieldDefn(i)
+    #         field_name = output_layer_defn.GetFieldDefn(i).GetName()
+    #         if re.match('CROP_\d{4}', field_name):
+    #             crop_year_fields.append(field_name)
+    #     print(crop_year_fields)
+    #     input('ENTER')
+    #
+    #     for output_ftr in output_layer:
+    #         county = str(output_ftr.GetField(f'FIPS'))
+    #         # TODO: Consider including Kings (06031) and Madera (06039) counties
+    #         if county not in ['06019', '06029', '06065', '06071', '06107']:
+    #             continue
+    #
+    #         for crop_field in crop_year_fields:
+    #             crop_type = output_ftr.GetFieldAsInteger(crop_field)
+    #             if crop_type == 69:
+    #                 output_ftr.SetField(crop_field, 78)
+    #             output_layer.SetFeature(output_ftr)
+    #     output_ds = None
 
 
 def arg_parse():

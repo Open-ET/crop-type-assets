@@ -20,15 +20,18 @@ PROJECT_NAME = 'openet'
 STORAGE_CLIENT = storage.Client(project=PROJECT_NAME)
 BUCKET_NAME = 'openet_temp'
 BUCKET_FOLDER = 'cadwr'
-YEARS = []
+YEARS = [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
 
 
-def main(YEARS, overwrite_flag=False):
+def main(years, project_id=None, overwrite_flag=False):
     """
 
     Parameters
     ----------
     years
+    project_id : str, optional
+        Google cloud project ID to use for GEE authentication.
+        The default is None.
     overwrite_flag : bool, optional
 
     Returns
@@ -41,8 +44,8 @@ def main(YEARS, overwrite_flag=False):
     tif_ws = os.path.join(workspace, 'images')
     map_ws = os.path.join(workspace, 'remaps')
 
-    if not YEARS:
-        YEARS = [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
+    if not years:
+        years = YEARS[:]
 
     # Hardcoding the shapefile folders and names for now since they are all slightly different
     src_paths = {
@@ -52,18 +55,34 @@ def main(YEARS, overwrite_flag=False):
         2019: os.path.join(src_ws, 'i15_Crop_Mapping_2019', 'i15_Crop_Mapping_2019.shp'),
         2020: os.path.join(src_ws, 'i15_Crop_Mapping_2020', 'i15_Crop_Mapping_2020.shp'),
         2021: os.path.join(src_ws, 'i15_Crop_Mapping_2021_SHP', 'i15_Crop_Mapping_2021.shp'),
-        2022: os.path.join(src_ws, 'i15_Crop_Mapping_2022_SHP', 'i15_Crop_Mapping_2022.shp'),
-        2023: os.path.join(src_ws, 'i15_Crop_Mapping_2023_Provisional_SHP', 'i15_Crop_Mapping_2023_Provisional.shp'),
-        2024: os.path.join(src_ws, 'i15_Crop_Mapping_2024_Provisional_SHP', 'i15_Crop_Mapping_2024_Provisional.shp'),
+        2022: os.path.join(src_ws, 'i15_crop_mapping_2022_shp', 'i15_Crop_Mapping_2022.shp'),
+        2023: os.path.join(src_ws, 'i15_crop_mapping_2023_provisional', 'i15_Crop_Mapping_2023_Provisional.shp'),
+        2024: os.path.join(src_ws, 'i15_crop_mapping_2024_provisional', 'i15_Crop_Mapping_2024_Provisional.shp'),
     }
 
-    project_id = 'projects/openet/assets'
-
-    collection_folder = f'{project_id}/crop_type/california'
+    collection_folder = f'projects/openet/assets/crop_type/california'
 
     band_name = 'cropland'
 
-    ee.Initialize()
+    # Initialize Earth Engine
+    # if gee_key_file:
+    #     logging.info(f'\nInitializing GEE using user key file: {gee_key_file}')
+    #     try:
+    #         ee.Initialize(ee.ServiceAccountCredentials('_', key_file=gee_key_file))
+    #     except ee.ee_exception.EEException:
+    #         logging.warning('Unable to initialize GEE using user key file')
+    #         return False
+    if project_id is not None:
+        logging.info(f'\nInitializing Earth Engine using project credentials'
+                     f'\n  Project ID: {project_id}')
+        try:
+            ee.Initialize(project=project_id)
+        except Exception as e:
+            logging.warning(f'\nUnable to initialize GEE using project ID\n  {e}')
+            return False
+    else:
+        logging.info('\nInitializing Earth Engine using default credentials')
+        ee.Initialize()
 
     # if not ee.data.getInfo(collection_folder):
     #     logging.info('\nFolder does not exist and will be built'
@@ -71,8 +90,8 @@ def main(YEARS, overwrite_flag=False):
     #     input('Press ENTER to continue')
     #     ee.data.createAsset({'type': 'FOLDER'}, collection_folder)
 
-    for year in YEARS:
-        if year not in YEARS:
+    for year in years:
+        if year not in years:
             raise ValueError(f'unsupported year {year}')
         logging.info(f'\n{year}')
 
@@ -434,6 +453,9 @@ def arg_parse():
     parser.add_argument(
         '--years', nargs='+', type=int, choices=YEARS, help='Years to process')
     parser.add_argument(
+        '--project', default=None,
+        help='Google cloud project ID to use for GEE authentication')
+    parser.add_argument(
         '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
     parser.add_argument(
@@ -448,4 +470,4 @@ if __name__ == '__main__':
     args = arg_parse()
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(YEARS=args.years, overwrite_flag=args.overwrite)
+    main(years=args.years, project_id=args.project, overwrite_flag=args.overwrite)

@@ -64,8 +64,8 @@ def main(
     export_coll_id = f'projects/openet/assets/crop_type/v2024b'
     # export_band_name = 'crop_type'
 
-    crop_type_folder_id = f'projects/openet/assets/features/fields/v2024a'
-    #crop_type_folder_id = f'projects/openet/assets/features/fields/temp'
+    state_fields_folder_id = f'projects/openet/assets/features/fields/v2024a'
+    #state_fields_folder_id = f'projects/openet/assets/features/fields/temp'
 
     # Using ERA5-Land MGRS tiles to avoid clipping outside CONUS
     mgrs_ftr_coll_id = f'projects/openet/assets/mgrs/global/era5land/zones'
@@ -234,7 +234,7 @@ def main(
     # Get a list of the available state field feature collections
     crop_type_states = [
         asset['id'].split('/')[-1]
-        for asset in ee.data.listAssets({'parent': crop_type_folder_id})['assets']
+        for asset in ee.data.listAssets({'parent': state_fields_folder_id})['assets']
         if asset['type'] == 'TABLE'
     ]
     logging.info(f'\nStates with field feature collections:\n  {", ".join(crop_type_states)}')
@@ -286,9 +286,9 @@ def main(
             # if state not in crop_type_states:
             #     continue
             # logging.debug(f'    {state}')
-            crop_type_coll_id = f'{crop_type_folder_id}/{state.upper()}'
-            crop_type_coll = ee.FeatureCollection(crop_type_coll_id).filterBounds(mgrs_geom)
-            field_coll = field_coll.merge(crop_type_coll)
+            state_fields_coll_id = f'{state_fields_folder_id}/{state.upper()}'
+            state_fields_coll = ee.FeatureCollection(state_fields_coll_id).filterBounds(mgrs_geom)
+            state_fields_coll = field_coll.merge(state_fields_coll)
 
         # CGM - There may be tiles without fields, especially for the eastern
         #   states, but we still want to build an image.  For now, just pause
@@ -317,14 +317,16 @@ def main(
                     ee.data.cancelTask(tasks[export_id])
                 # This is intentionally not an "elif" so that a task can be
                 # cancelled and an existing image/file/asset can be removed
-                if asset_id in asset_list or asset_short_id in asset_list:
-                    logging.info('  Asset already exists, removing')
-                    ee.data.deleteAsset(asset_id)
+                if (asset_id in asset_list) or (asset_short_id in asset_list):
+                    logging.info('  Asset already exists, overwriting')
+                    # CGM - Switching to use the overwrite_flag in the export call
+                    # logging.info('  Asset already exists, removing')
+                    # ee.data.deleteAsset(asset_id)
             else:
                 if export_id in tasks.keys():
                     logging.info('  Task already submitted, exiting')
                     continue
-                elif asset_id in asset_list or asset_short_id in asset_list:
+                elif (asset_id in asset_list) or (asset_short_id in asset_list):
                     logging.info('  Asset already exists, skipping')
                     continue
 
@@ -333,8 +335,8 @@ def main(
                 'build_date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
                 'build_status': 'permanent',
                 'core_version': openet.core.__version__,
-                'crop_type_folder': crop_type_folder_id,
-                'crop_type_states': ','.join(mgrs_states),
+                'fields_folder': state_fields_folder_id,
+                'fields_states': ','.join(mgrs_states),
                 'mgrs_tile': mgrs_tile,
                 'tool_name': TOOL_NAME,
                 'tool_version': TOOL_VERSION,
@@ -344,14 +346,6 @@ def main(
                 properties['build_status'] = 'provisional'
             elif year > cdl_year_max:
                 properties['build_status'] = 'provisional'
-
-            # # DEADBEEF
-            # print(
-            #     field_coll.filter(ee.Filter.gt(crop_type_field, 0))
-            #     .filter(ee.Filter.rangeContains(crop_type_field, 80.5, 195.5).Not())
-            #     .size().getInfo()
-            # )
-            # input('ENTER')
 
             # Start with the MGRS mask set to 0
             output_img = mgrs_mask_img.updateMask(0)
@@ -369,7 +363,6 @@ def main(
             )
             output_img = output_img.addBands(field_img.rename(['fields']))
             properties['field_states'] = ','.join(field_states)
-
 
             # Mosaic the California Crop Mapping image for the UTM zone before any CDL images
             if mgrs_tile in ['10S', '10T', '11S']:
@@ -406,7 +399,7 @@ def main(
                     input('ENTER')
 
                 if ca_img:
-                    output_img = output_img.addBands(ca_img.rename(['landiq']))
+                    output_img = output_img.addBands(ca_img.rename(['cadwr']))
                     properties['custom_ca_img_id'] = ca_img_id
 
 
@@ -416,6 +409,7 @@ def main(
             # Use a 2008 remapped annual crop image for all pre-2008 years
             # For all years after the last available CDL year,
             #   use an annual crop remapped version of the last CDL year
+            # CGM - This is intentionally using the CDL folder and not the CA folder
             if mgrs_tile in ['10S', '10T', '11S']:
                 if year < cdl_year_min:
                     ca_cdl_img_id = f'{cdl_coll_id}/{cdl_year_min}'
@@ -428,7 +422,6 @@ def main(
                     ee.Image(ca_cdl_img_id).select(['cropland'])
                     .remap(cdl_remap_in, cdl_remap_out)
                 )
-                # The clip could be changed to a mask using the CIMIS mask?
                 ca_geom = (
                     ee.FeatureCollection('TIGER/2018/States')
                     .filterMetadata('STUSPS', 'equals', 'CA').first().geometry()
@@ -500,7 +493,7 @@ def main(
                 crsTransform=export_info['geo_str'],
                 maxPixels=export_info['maxpixels']*2,
                 pyramidingPolicy={'cropland': 'mode'},
-                # overwrite=overwrite_flag,
+                overwrite=overwrite_flag,
             )
 
             logging.info('  Starting export task')

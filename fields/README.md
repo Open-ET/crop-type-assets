@@ -46,14 +46,12 @@ The crop type remappings are different for California since we are currently usi
 * 2015 - Use remapped annual 2014 CA Crop Mapping
 * 2016 - Use 2016 CA Crop Mapping directly
 * 2017 - Use remapped annual 2016 CA Crop Mapping
-* 2018-2023 - Use CA Crop Mapping directly
-* 2024 - Use remapped annual 2023 CA C
+* 2018-2024 - Use CA Crop Mapping directly
 
 #### Other States
 
 * pre-2008 - Use remapped annual 2008 CDL for years prior to 2008
-* 2008-2023 - Use remapped annual CDL
-* post-2024 - Use remapped annual 2024 CDL for all years after 2024
+* 2008-2024 - Use remapped annual CDL
 
 ## Replace bad CDL crop type values in New Mexico and Colorado
 
@@ -72,3 +70,5 @@ python fill_missing_crop_types.py --states ALL
 ```
 python postprocess_shapefiles.py --states ALL
 ```
+
+AZ,AR,CA,CO,CT,DE,FL,GA,ID,IL,IN,IA,KS,KY,LA,ME,MD,MA,MI,MN,MS,MO,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY

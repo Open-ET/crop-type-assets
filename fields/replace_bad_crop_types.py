@@ -133,41 +133,6 @@ def main(states=[]):
             output_layer.SetFeature(output_ftr)
         output_ds = None
 
-    # DEADBEEF - Table grape classes are being adjusted in the rasters
-    # if 'CA' in states:
-    #     logging.info('\nSet the crop type for all "grapes" (CDL 69) in Fresno, Kern, '
-    #                  'Riverside, San Bernadino, and Tulare counties (in California) '
-    #                  'to the custom "table grape" value of 78')
-    #     state = 'CA'
-    #     shp_path = os.path.join(shapefile_ws, state, f'{state}.shp')
-    #     logging.info(f'  {shp_path}')
-    #     output_ds = shp_driver.Open(shp_path, 1)
-    #     output_layer = output_ds.GetLayer()
-    #
-    #     # Get the list of all "CROP_YYYY" fields in the shapefile
-    #     crop_year_fields = []
-    #     output_layer_defn = output_layer.GetLayerDefn()
-    #     for i in range(output_layer_defn.GetFieldCount()):
-    #         #field = output_layer_defn.GetFieldDefn(i)
-    #         field_name = output_layer_defn.GetFieldDefn(i).GetName()
-    #         if re.match('CROP_\d{4}', field_name):
-    #             crop_year_fields.append(field_name)
-    #     print(crop_year_fields)
-    #     input('ENTER')
-    #
-    #     for output_ftr in output_layer:
-    #         county = str(output_ftr.GetField(f'FIPS'))
-    #         # TODO: Consider including Kings (06031) and Madera (06039) counties
-    #         if county not in ['06019', '06029', '06065', '06071', '06107']:
-    #             continue
-    #
-    #         for crop_field in crop_year_fields:
-    #             crop_type = output_ftr.GetFieldAsInteger(crop_field)
-    #             if crop_type == 69:
-    #                 output_ftr.SetField(crop_field, 78)
-    #             output_layer.SetFeature(output_ftr)
-    #     output_ds = None
-
 
 def arg_parse():
     """"""

@@ -1,9 +1,7 @@
 import argparse
-# from datetime import datetime, timezone
 import logging
 import os
 import pprint
-import re
 from time import sleep
 import zipfile
 
@@ -23,12 +21,23 @@ logging.getLogger('urllib3').setLevel(logging.INFO)
 STORAGE_CLIENT = storage.Client(project='openet')
 
 
-def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
+def main(
+        states,
+        upload_flag=True,
+        ingest_flag=True,
+        overwrite_flag=False,
+        gee_key_file=None,
+        project_id=None,
+):
     """Postprocess and upload the state field shapefiles
 
     Parameters
     ----------
     states : list
+    upload_flag : bool, optional
+        If True, upload zip files to bucket (the default is False).
+    ingest_flag : bool, optional
+        If True, ingest into GEE (the default is False).
     overwrite_flag : bool, optional
         If True, overwrite existing files (the default is False).
     gee_key_file : str, None, optional
@@ -47,13 +56,13 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
 
     # Temporary bucket
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_shp_20250417'
+    bucket_folder = 'temp_shp_20260205'
+    # bucket_folder = 'temp_shp_20250417'
 
     # bucket_name = 'openet_field_boundaries'
     # bucket_folder = ''
-
-    # For now write the fields to a temp folder
-    collection_folder = f'projects/openet/assets/features/fields/temp'
+    state_fields_folder_id = f'projects/openet/assets/features/fields/v2024a'
+    # state_fields_folder_id = f'projects/openet/assets/features/fields/temp'
 
     if states == ['ALL']:
         # 'AL' is not included since there is not an Alabama field shapefile
@@ -92,7 +101,7 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
 
     logging.info('\nReading bucket files')
     bucket = STORAGE_CLIENT.bucket(bucket_name)
-    bucket_files = sorted([x.name for x in bucket.list_blobs()])
+    bucket_files = sorted([x.name for x in bucket.list_blobs(prefix=bucket_folder)])
 
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
 
@@ -160,53 +169,60 @@ def main(states, overwrite_flag=False, gee_key_file=None, project_id=None):
             continue
 
 
-        logging.info('Uploading zip file to bucket')
-        bucket_path = f'{bucket_folder}/{zip_name}' if bucket_folder else zip_name
-        logging.debug(f'  {bucket_path}')
-        blob = bucket.blob(bucket_path)
-        # if blob.exists():
-        if zip_name in bucket_files:
-            if overwrite_flag:
-                logging.info('  Removing existing zip file')
-                blob.delete()
-            else:
-                logging.info('  Overwrite is False - skipping')
-                continue
-        blob.upload_from_filename(zip_path)
-        sleep(5)
+        if upload_flag:
+            logging.info('Uploading zip file to bucket')
+            bucket_path = f'{bucket_folder}/{zip_name}' if bucket_folder else zip_name
+            logging.debug(f'  {bucket_path}')
+            blob = bucket.blob(bucket_path)
+            # if blob.exists():
+            if zip_name in bucket_files:
+                if overwrite_flag:
+                    logging.info('  Removing existing zip file')
+                    blob.delete()
+                else:
+                    logging.info('  Overwrite is False - skipping')
+                    continue
+            blob.upload_from_filename(zip_path)
+            # blob.upload_from_filename(zip_path, timeout_seconds=300)
+            # blob.upload_from_filename(zip_path, timeout_seconds=None)
+            # from google.api_core import retry
+            # my_retry = retry.Retry(deadline=500.0)  # Total time in seconds
+            # blob.upload_from_filename(zip_path, retry=my_retry)
+            # sleep(5)
 
 
-        logging.info('Ingesting shapefiles into Earth Engine')
-        # for state in states:
-        # logging.info(f'{state}')
-        bucket_path = f'gs://{bucket_name}/{bucket_folder}/{state}.zip'
-        collection_id = f'{collection_folder}/{state}'
-        logging.debug(f'  {bucket_path}')
-        logging.debug(f'  {collection_id}')
+        if ingest_flag:
+            logging.info('Ingesting shapefiles into Earth Engine')
+            # for state in states:
+            # logging.info(f'{state}')
+            bucket_path = f'gs://{bucket_name}/{bucket_folder}/{state}.zip'
+            state_fields_coll_id = f'{state_fields_folder_id}/{state}'
+            logging.debug(f'  {bucket_path}')
+            logging.debug(f'  {state_fields_coll_id}')
 
-        if ee.data.getInfo(collection_id):
-            if overwrite_flag:
-                logging.info('  FeatureCollection already exists - removing')
-                ee.data.deleteAsset(collection_id)
-            else:
-                logging.info('  FeatureCollection already exists - skipping')
-                continue
+            if ee.data.getInfo(state_fields_coll_id):
+                if overwrite_flag:
+                    logging.info('  FeatureCollection already exists - removing')
+                    ee.data.deleteAsset(state_fields_coll_id)
+                else:
+                    logging.info('  FeatureCollection already exists - skipping')
+                    continue
 
-        logging.info('  Ingesting into Earth Engine')
-        task_id = ee.data.newTaskId()[0]
-        logging.debug(f'  {task_id}')
-        params = {
-            'name': collection_id,
-            'sources': [{'primaryPath': bucket_path}],
-            # 'properties': {
-            #     date_property: datetime.today().strftime('%Y-%m-%d'),
-            # }
-        }
-        try:
-            ee.data.startTableIngestion(task_id, params, allow_overwrite=True)
-        except Exception as e:
-            logging.exception(f'  Exception: {e}\n  Exiting')
-            return False
+            logging.info('  Ingesting into Earth Engine')
+            task_id = ee.data.newTaskId()[0]
+            logging.debug(f'  {task_id}')
+            params = {
+                'name': state_fields_coll_id,
+                'sources': [{'primaryPath': bucket_path}],
+                # 'properties': {
+                #     date_property: datetime.today().strftime('%Y-%m-%d'),
+                # }
+            }
+            try:
+                ee.data.startTableIngestion(task_id, params, allow_overwrite=True)
+            except Exception as e:
+                logging.exception(f'  Exception: {e}\n  Exiting')
+                return False
 
 
 def arg_parse():
@@ -217,6 +233,12 @@ def arg_parse():
     parser.add_argument(
         '--states', default=['ALL'], nargs='+',
         help='Comma/space separated list of states')
+    parser.add_argument(
+        '--no_upload', default=False, action='store_true',
+        help='Upload to bucket')
+    parser.add_argument(
+        '--no_ingest', default=False, action='store_true',
+        help='Ingest into GEE')
     parser.add_argument(
         '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
@@ -240,6 +262,8 @@ if __name__ == '__main__':
 
     main(
         states=args.states,
+        upload_flag=not(args.no_upload),
+        ingest_flag=not(args.no_ingest),
         overwrite_flag=args.overwrite,
         gee_key_file=args.key,
         project_id=args.project,

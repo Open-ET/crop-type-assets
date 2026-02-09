@@ -49,7 +49,7 @@ def main(states, years=[], overwrite_flag=False):
 
     # CSV stats bucket path
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20250417'
+    bucket_folder = 'temp_croptype_20260205'
 
     output_format = 'CSV'
 
@@ -179,9 +179,11 @@ def main(states, years=[], overwrite_flag=False):
             logging.debug(f'  Reading stats {output_format}')
             # Restucture the feature information for writing to the shapefile
             if output_format.upper() == 'CSV':
-                update_df = pd.read_csv(stats_path)\
-                    .drop(['system:index', '.geo'], axis=1)\
+                update_df = (
+                    pd.read_csv(stats_path)
+                    .drop(['system:index', '.geo'], axis=1)
                     .set_index('OPENET_ID')
+                )
                 update_features = update_df.to_dict('index')
                 # print(sum(ftr[f'CROP_{year}'] is None for ftr in update_features.values()))
             elif output_format.upper() == 'GEOJSON':
@@ -190,7 +192,8 @@ def main(states, years=[], overwrite_flag=False):
                 update_features = {
                     ftr['properties']['OPENET_ID']: {
                         k: 0 if re.match('CROP_\d{4}', k) and v is None else v
-                        for k, v in ftr['properties'].items()}
+                        for k, v in ftr['properties'].items()
+                    }
                     for ftr in update_features['features']
                 }
 
@@ -276,7 +279,8 @@ def main(states, years=[], overwrite_flag=False):
                 update_features = {
                     ftr['properties']['OPENET_ID']: {
                         k: 0 if re.match('CROP_\d{4}', k) and v is None else v
-                        for k, v in ftr['properties'].items()}
+                        for k, v in ftr['properties'].items()
+                    }
                     for ftr in update_features['features']
                 }
 
@@ -344,7 +348,8 @@ def main(states, years=[], overwrite_flag=False):
                 update_features = {
                     ftr['properties']['OPENET_ID']: {
                         k: 0 if re.match('CROP_\d{4}', k) and v is None else v
-                        for k, v in ftr['properties'].items()}
+                        for k, v in ftr['properties'].items()
+                    }
                     for ftr in update_features['features']
                 }
 

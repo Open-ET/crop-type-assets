@@ -116,8 +116,10 @@ def main(
     # mgrs_zone_field = 'MGRS_ZONE'
 
     area_osr = osr.SpatialReference()
-    area_osr.ImportFromProj4('+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 '
-                             '+datum=NAD83 +units=m +no_defs +type=crs')
+    area_osr.ImportFromProj4(
+        '+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 '
+        '+datum=NAD83 +units=m +no_defs +type=crs'
+    )
 
 
     # CGM - I think Matt used a 2000m2 area threshold, so start smaller than that initially

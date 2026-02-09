@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import logging
 import math
 import os
-# import pprint
+import pprint
 
 import ee
 from google.cloud import storage
@@ -95,7 +95,7 @@ def main(years, project_id=None, overwrite_flag=False):
             raise ValueError(f'unsupported year {year}')
         logging.info(f'\n{year}')
 
-        if year >= 2023:
+        if year >= 2024:
             build_status = 'provisional'
         else:
             build_status = 'permanent'
@@ -133,13 +133,9 @@ def main(years, project_id=None, overwrite_flag=False):
 
         # Load the California to CDL remap (MB-Changed to read a single remap table for 2016-2023)
         if year == 2014:
-            remap_df = pd.read_csv(
-                os.path.join(map_ws, f'ca{year}_cdl_remap_table.csv'), comment='#'
-            )
+            remap_df = pd.read_csv(os.path.join(map_ws, f'ca{year}_cdl_remap_table.csv'), comment='#')
         else:
-            remap_df = pd.read_csv(
-                os.path.join(map_ws, f'ca2016_2023_cdl_remap_table.csv'), comment='#'
-            )
+            remap_df = pd.read_csv(os.path.join(map_ws, f'ca2016_2023_cdl_remap_table.csv'), comment='#')
         ca_cdl_remap = dict(zip(remap_df.IN, remap_df.OUT))
 
         src_path = src_paths[year]
@@ -181,7 +177,7 @@ def main(years, project_id=None, overwrite_flag=False):
                     main_crop = None
 
                 try:
-                    if main_crop and main_crop != '****':
+                    if main_crop and (main_crop != '****'):
                         cdl_code = ca_cdl_remap[main_crop]
                     else:
                         cdl_code = ca_cdl_remap[crop_type]

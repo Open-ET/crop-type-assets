@@ -52,13 +52,18 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
     cdl_year_min = 2008
     cdl_year_max = 2024
 
+    # ca_year_min = 2008
+    ca_year_max = 2024
+
     ca_coll_id = 'projects/openet/assets/crop_type/california'
     nlcd_coll_id = 'projects/sat-io/open-datasets/USGS/ANNUAL_NLCD/LANDCOVER'
 
-    field_folder_id = f'projects/openet/assets/features/fields/temp'
+    state_fields_folder_id = f'projects/openet/assets/features/fields/v2024a'
+    # state_fields_folder_id = f'projects/openet/assets/features/fields/temp'
 
     bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20250417'
+    bucket_folder = 'temp_shp_20260205'
+    # bucket_folder = 'temp_shp_20250417'
 
     output_format = 'CSV'
 
@@ -170,15 +175,15 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
 
         logging.info(f'\n{state} CDL')
 
-        field_coll_id = f'{field_folder_id}/{state}'
-        field_coll = ee.FeatureCollection(field_coll_id)
+        state_fields_coll_id = f'{state_fields_folder_id}/{state}'
+        state_fields_coll = ee.FeatureCollection(state_fields_coll_id)
 
         for year in years:
             export_id = f'{state}_cdl_{year}'.lower()
 
             # Only process states that are present in the CDL image
             # Missing years will be filled with the "fill_missing_crop_types.py" tool
-            if state not in cdl_state_years.keys() or year not in cdl_state_years[state]:
+            if (state not in cdl_state_years.keys()) or (year not in cdl_state_years[state]):
                 continue
             logging.info(f'{export_id}')
 
@@ -285,7 +290,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
             # Compute the mode
             crop_type_coll = cdl_img.reduceRegions(
                 reducer=ee.Reducer.mode().unweighted(),
-                collection=field_coll,
+                collection=state_fields_coll,
                 crs=cdl_img.projection(),
                 crsTransform=ee.List(ee.Dictionary(
                     ee.Algorithms.Describe(cdl_img.projection())).get('transform')),
@@ -318,8 +323,8 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
         state = 'CA'
         logging.info(f'\nCA Crop Mapping Datasets')
 
-        field_coll_id = f'{field_folder_id}/{state}'
-        field_coll = ee.FeatureCollection(field_coll_id)
+        state_fields_coll_id = f'{state_fields_folder_id}/{state}'
+        state_fields_coll = ee.FeatureCollection(state_fields_coll_id)
 
         for year in years:
             # NOTE: This could be restructured to not compute all the years
@@ -356,12 +361,12 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
             #   Starting before 2009 makes switching to CDL 2008 a little tricky
 
             # Select the California image
-            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
+            if year in [2014, 2016] + list(range(2018, ca_year_max+1)):
                 # Use the California image directly for years when it is present
                 ca_img_id = f'{ca_coll_id}/{year}'
                 ca_img = ee.Image(ca_img_id)
-            elif year > 2023:
-                ca_img_id = f'{ca_coll_id}/2023'
+            elif year > ca_year_max:
+                ca_img_id = f'{ca_coll_id}/{ca_year_max}'
                 ca_img = ee.Image(ca_img_id).remap(cdl_remap_in, cdl_remap_out)
             elif year in [2015, 2017]:
                 ca_img_id = f'{ca_coll_id}/{year-1}'
@@ -381,7 +386,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
             else:
                 raise Exception(f'unexpected California Crop Mapping year: {year}')
 
-            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
+            if year in [2014, 2016] + list(range(2018, ca_year_max+1)):
                 crop_src = f'{ca_img_id}'
             else:
                 crop_src = f'{ca_img_id} - remapped annual crops'
@@ -399,7 +404,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
 
             crop_type_coll = crop_type_img.reduceRegions(
                 reducer=reducer,
-                collection=field_coll,
+                collection=state_fields_coll,
                 crs=crop_type_img.projection(),
                 crsTransform=ee.List(ee.Dictionary(ee.Algorithms.Describe(
                     crop_type_img.projection())).get('transform')),
@@ -433,8 +438,8 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
         state = 'CA'
         logging.info(f'\nCA Crop Mapping / CDL Composite')
 
-        field_coll_id = f'{field_folder_id}/{state}'
-        field_coll = ee.FeatureCollection(field_coll_id)
+        state_fields_coll_id = f'{state_fields_folder_id}/{state}'
+        state_fields_coll = ee.FeatureCollection(state_fields_coll_id)
 
         for year in years:
             if year < cdl_year_min:
@@ -465,12 +470,12 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
             # if year < 2009:
             #     logging.debug('Not using California Crop Mapping before 2009 - skipping')
             #     continue
-            if year in [2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023]:
+            if year in [2014, 2016] + list(range(2018, ca_year_max+1)):
                 # Use the California Crop Mapping directly for years when it is present
                 ca_img_id = f'{ca_coll_id}/{year}'
                 ca_img = ee.Image(ca_img_id)
-            elif year > 2023:
-                ca_img_id = f'{ca_coll_id}/2023'
+            elif year > ca_year_max:
+                ca_img_id = f'{ca_coll_id}/{ca_year_max}'
                 ca_img = ee.Image(ca_img_id).remap(cdl_remap_in, cdl_remap_out)
             elif year in [2015, 2017]:
                 ca_img_id = f'{ca_coll_id}/{year-1}'
@@ -535,14 +540,16 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
 
             # Compute zonal stats on the mosaiced images using the Crop Mapping
             #   image crs and transform
-            crop_type_coll = crop_type_img\
+            crop_type_coll = (
+                crop_type_img
                 .reduceRegions(
                     reducer=ee.Reducer.mode().unweighted(),
-                    collection=field_coll,
+                    collection=state_fields_coll,
                     crs=ca_img.projection(),
                     crsTransform=ee.List(ee.Dictionary(ee.Algorithms.Describe(
                         ca_img.projection())).get('transform')),
                 )
+            )
 
             # Cleanup the output collection
             def set_properties(ftr):

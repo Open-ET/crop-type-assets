@@ -40,20 +40,18 @@ def main(states, years=[], overwrite_flag=False):
     # Don't change min year unless additional CONUS CDL images are ingested
     #   or additional crop type data is identified
     year_min = 1997
-    year_max = 2024
+    year_max = 2025
 
     # Years where CDL has full CONUS coverage
     # Don't change min year unless additional CONUS CDL images are ingested
     cdl_year_min = 2008
-    cdl_year_max = 2024
+    cdl_year_max = 2025
 
     # CSV stats bucket path
-    bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_croptype_20260205'
+    bucket_name = 'openet_temp'
+    bucket_folder = 'crop_type/temp_croptype_20260323'
 
     output_format = 'CSV'
-
-    shell_flag = True
 
     field_ws = os.getcwd()
     shapefile_ws = os.path.join(field_ws, 'shapefiles')

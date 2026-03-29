@@ -43,14 +43,14 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
     # Don't change min year unless additional CONUS CDL images are ingested
     #   or additional crop type data is identified
     year_min = 1997
-    year_max = 2024
+    year_max = 2025
 
     cdl_coll_id = 'USDA/NASS/CDL'
 
     # Years where CDL has full CONUS coverage
     # Don't change min year unless additional CONUS CDL images are ingested
     cdl_year_min = 2008
-    cdl_year_max = 2024
+    cdl_year_max = 2025
 
     # ca_year_min = 2008
     ca_year_max = 2024
@@ -61,9 +61,9 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
     state_fields_folder_id = f'projects/openet/assets/features/fields/v2024a'
     # state_fields_folder_id = f'projects/openet/assets/features/fields/temp'
 
-    bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_shp_20260205'
-    # bucket_folder = 'temp_shp_20250417'
+    # CSV stats bucket path
+    bucket_name = 'openet_temp'
+    bucket_folder = 'crop_type/temp_croptype_20260323'
 
     output_format = 'CSV'
 
@@ -204,7 +204,7 @@ def main(states, years=[], overwrite_flag=False, gee_key_file=None, project_id=N
                     logging.info('  File already exists in bucket, skipping')
                     continue
 
-            # For post-2022, use the annual crop remapped 2022 image
+            # For post-2022, use the annual crop remapped image of the latest year
             # For pre-2008 years, if state specific images are not available,
             #   use the annual crop remapped 2008 images for all years
             # The 2005 and 2007 CDL images have slightly different naming

@@ -53,14 +53,14 @@ def main(
     logging.info('\nUpdating field crop type values')
 
     year_min = 1997
-    year_max = 2024
+    year_max = 2025
 
     field_ws = os.getcwd()
-    input_zip_ws = os.path.join(field_ws, 'source_zips')
+    # input_zip_ws = os.path.join(field_ws, 'source_zips')
     shapefile_ws = os.path.join(field_ws, 'shapefiles')
 
-    bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_shp_20250417'
+    # bucket_name = 'openet_temp'
+    # bucket_folder = 'crop_type/temp_shp_20260205'
 
     # For now write the fields to a temp folder
     collection_folder = f'projects/openet/assets/features/fields/temp'
@@ -371,7 +371,7 @@ def main(
                 ['MOD_DATE', 10, 'string'],
                 ['SOURCECODE', 80, 'string'],
                 ['STATE', 2, 'string'],
-                ]:
+        ]:
             if f_name not in existing_fields:
                 logging.info(f'  Adding {f_name} field')
                 input_ds = shp_driver.Open(shp_path, 1)
@@ -396,7 +396,7 @@ def main(
                 [length_field, 'real'],
                 [score_field, 'real'],
                 [count_field, 'integer'],
-                ]:
+        ]:
             if f_name not in existing_fields:
                 logging.info(f'  Adding {f_name} field')
                 input_ds = shp_driver.Open(shp_path, 1)
@@ -597,7 +597,6 @@ def main(
         #             input_ftr.SetField('OPENET_ID', f'{state}_{openet_id_max}')
         #             input_layer.SetFeature(input_ftr)
         #     input_ds = None
-
 
 
 def arg_parse():

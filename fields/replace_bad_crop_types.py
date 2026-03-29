@@ -20,6 +20,9 @@ def main(states=[]):
     """
     logging.info('\nReplace bad crop type values')
 
+    year_min = 1997
+    year_max = 2025
+
     field_ws = os.getcwd()
     shapefile_ws = os.path.join(field_ws, 'shapefiles')
 
@@ -127,7 +130,7 @@ def main(states=[]):
         output_ds = shp_driver.Open(shp_path, 1)
         output_layer = output_ds.GetLayer()
         for output_ftr in output_layer:
-            for tgt_year in range(1997, 2024):
+            for tgt_year in range(year_min, year_max+1):
                 output_ftr.SetField(f'CROP_{tgt_year}', 47)
                 output_ftr.SetField(f'CSRC_{tgt_year}', 'DEFAULT')
             output_layer.SetFeature(output_ftr)

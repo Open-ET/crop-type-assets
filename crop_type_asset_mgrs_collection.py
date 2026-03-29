@@ -91,10 +91,10 @@ def main(
     annual_remap_path = os.path.join(os.getcwd(), 'cdl_annual_crop_remap_table.csv')
 
     year_min = 1985
-    year_max = 2024
+    year_max = 2025
 
     ca_year_max = 2024
-    ca_year_prov = [2024]
+    ca_year_prov = [2025]
 
     # Parse user inputs
     if not years:
@@ -288,7 +288,7 @@ def main(
             # logging.debug(f'    {state}')
             state_fields_coll_id = f'{state_fields_folder_id}/{state.upper()}'
             state_fields_coll = ee.FeatureCollection(state_fields_coll_id).filterBounds(mgrs_geom)
-            state_fields_coll = field_coll.merge(state_fields_coll)
+            field_coll = field_coll.merge(state_fields_coll)
 
         # CGM - There may be tiles without fields, especially for the eastern
         #   states, but we still want to build an image.  For now, just pause
@@ -316,12 +316,9 @@ def main(
                     logging.info('  Task already submitted, cancelling')
                     ee.data.cancelTask(tasks[export_id])
                 # This is intentionally not an "elif" so that a task can be
-                # cancelled and an existing image/file/asset can be removed
+                #   cancelled and an existing image/file/asset can be removed
                 if (asset_id in asset_list) or (asset_short_id in asset_list):
                     logging.info('  Asset already exists, overwriting')
-                    # CGM - Switching to use the overwrite_flag in the export call
-                    # logging.info('  Asset already exists, removing')
-                    # ee.data.deleteAsset(asset_id)
             else:
                 if export_id in tasks.keys():
                     logging.info('  Task already submitted, exiting')

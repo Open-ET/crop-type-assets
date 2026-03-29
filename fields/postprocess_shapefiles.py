@@ -54,10 +54,9 @@ def main(
     shapefile_ws = os.path.join(field_ws, 'shapefiles')
     output_zip_ws = os.path.join(field_ws, 'updated_zips')
 
-    # Temporary bucket
-    bucket_name = 'openet_geodatabase'
-    bucket_folder = 'temp_shp_20260205'
-    # bucket_folder = 'temp_shp_20250417'
+    # Shapefile bucket path
+    bucket_name = 'openet_temp'
+    bucket_folder = 'crop_type/temp_shp_20260323'
 
     # bucket_name = 'openet_field_boundaries'
     # bucket_folder = ''
